@@ -1,0 +1,27 @@
+Package: bsplinedef
+Depends: 
+    R (>= 3.1.0),
+    MASS,
+    splines,
+    fields,
+    RandomFields
+Type: Package
+Title: Spatial Deformation via Tensor Product of B-splines
+Version: 0.1.3
+Author: Guilherme Ludwig [aut, cre],
+    Ronaldo Dias [aut],
+    Paul Sampson [ctb]
+Maintainer: Guilherme Ludwig <gvludwig@ime.unicamp.br>
+Description: Computes coordinate transformations of the form 
+    (y1, y2) = (f1(x1, x2), f2(x1, x2)) for spatial regression, 
+    where a spatial process Y on (y1, y2) has known stationary 
+    covariance function. The functions f1 and f2 are obtained
+    via the tensor product of B-splines, with a regularization
+    penalty to ensure f1, f2 are injective functions. The case 
+    for Y Gaussian with Matern covariance is implemented, as 
+    well as documentation for extensions to different spatial 
+    covariance functions.
+License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 5.0.1
