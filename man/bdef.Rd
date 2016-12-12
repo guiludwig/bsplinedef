@@ -4,20 +4,20 @@
 \alias{bdef}
 \title{Spatial Deformation via B-spline}
 \usage{
-bdef(cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var =
-  NA), x, y, df1 = 8, df2 = 8, window = list(x = range(x[, 1]), y =
-  range(x[, 2])), lambda = NA, ...)
+bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var
+  = NA), df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y = range(x[,
+  2])), lambda = NA, ...)
 }
 \arguments{
-\item{cov.model}{A model for the covariance function. See \code{\link{RMmodel}}
-on the RandomFields package for details. Defaults to
-Mat\'{e}rn model with parameters nu = 2.5 and
-variance and scale to be estimated.}
-
 \item{x}{A n times 2 matrix of coordinates for the sampled data points.}
 
 \item{y}{A vector of length n with the values taken by the response
 at the corresponding spatial locations in x.}
+
+\item{cov.model}{A model for the covariance function. See \code{\link{RMmodel}}
+on the RandomFields package for details. Defaults to
+Mat\'{e}rn model with parameters nu = 2.5 and
+variance and scale to be estimated.}
 
 \item{df1}{Square root of the total degrees of freedom for the tensor
 product of B-spline basis for the first coordinate.
@@ -74,7 +74,13 @@ covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) + RMnugget(var = 1)
 data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 y <- as.numeric(unlist(data@data))
 test1 <- bdef(x, y) # lambda estimated
-test2 <- bdef(x, y, lambda = .5) # lambda provided by user
+test2 <- bdef(x, y, lambda = -100) # lambda provided by user
+test3 <- bdef(x, y, lambda = 100) # lambda provided by user
+test4 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA)) # No nugget effect (default)
+plotGrid(test1, margins = TRUE)
+plotGrid(test2, margins = TRUE)
+plotGrid(test3, margins = TRUE)
+plotGrid(test4, margins = TRUE)
 
 }
 \author{

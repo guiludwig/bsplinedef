@@ -1,4 +1,5 @@
-likelihoodTarget <- function(theta, DF1 = df1, DF2 = df2, B = basis,
+likelihoodTarget <- function(theta,
+                             DF1 = df1, DF2 = df2, B = basis,
                              M = model0, X = x, Y = y, L = lambda){
   # coords <- dist(X)
   # coords <- as.matrix(coords)

@@ -58,7 +58,13 @@
 #' data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 #' y <- as.numeric(unlist(data@data))
 #' test1 <- bdef(x, y) # lambda estimated
-#' test2 <- bdef(x, y, lambda = .5) # lambda provided by user
+#' test2 <- bdef(x, y, lambda = -100) # lambda provided by user
+#' test3 <- bdef(x, y, lambda = 100) # lambda provided by user
+#' test4 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA)) # No nugget effect (default)
+#' plotGrid(test1, margins = TRUE)
+#' plotGrid(test2, margins = TRUE)
+#' plotGrid(test3, margins = TRUE)
+#' plotGrid(test4, margins = TRUE)
 #'
 #' @author Guilherme Ludwig and Ronaldo Dias
 #'
@@ -69,12 +75,13 @@
 #' @seealso \code{\link{RandomFields}}
 #' @keywords Spatial Statistics
 #' @keywords Functional Data Analysis
-bdef <- function(cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var = NA),
-                 x, y, df1 = 8, df2 = 8,
+bdef <- function(x, y,
+                 cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var = NA),
+                 df1 = 6, df2 = 6,
                  window = list(x = range(x[,1]), y = range(x[,2])),
                  lambda = NA, ...) {
 
-  if(!require(splines)) stop("Please install the 'splines' packages")
+  RFoptions(printlevel=0, warn_normal_mode=FALSE)
 
   B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE)
   B2 <- bs(range(x[, 2]), df = df2, intercept = TRUE)
@@ -82,6 +89,8 @@ bdef <- function(cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget
   W <- matrix(0, n, df1*df2) # TODO debug unequal df
   for(i in 1:n) W[i,] <- kronecker(predict(basis$B1, x[, 1])[i, ],
                                    predict(basis$B2, x[, 2])[i, ])
+  theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
+               as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 2]))))
 
   # model fitting here: for k = 1, 2, ...
   # k: with theta1, theta2, estimate mu(?), sigma,
@@ -93,33 +102,43 @@ bdef <- function(cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget
 
   # bsplinedef:::likelihoodTarget(c(seq(1, 2*df1*df2), 1))
   if(is.na(lambda)){
-    theta0 <- optim(c(seq(1, 2*df1*df2), 1), likelihoodTarget)$par
+    # theta0 <- optim(c(seq(1, 2*df1*df2), 1), likelihoodTarget)$par
+    theta0 <- optim(c(theta00, 0), likelihoodTarget,
+                    DF1 = df1, DF2 = df2, B = basis,
+                    M = model0, X = x, Y = y, L = lambda)$par
   } else {
-    theta0 <- optim(seq(1, 2*df1*df2), likelihoodTarget)$par
+    theta0 <- optim(theta00, likelihoodTarget, # seq(1, 2*df1*df2)
+                    DF1 = df1, DF2 = df2, B = basis,
+                    M = model0, X = x, Y = y, L = lambda)$par
   }
 
   f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
   f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
   if(is.na(lambda)){
-    hat.lambda = theta0
+    hat.lambda = theta0[2*df1*df2+1]
   } else {
     hat.lambda = lambda
   }
 
   model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y))
+  theta.new <- optim(theta0, likelihoodTarget,
+                     DF1 = df1, DF2 = df2, B = basis,
+                     M = model0, X = x, Y = y, L = lambda)$par
 
   # TODO: Iterate
 
   ret <- list(window = window,
               basis = basis,
               lambda = hat.lambda,
-              x = x, def.x = def.x,
-              theta1 = theta1,
-              theta2 = theta2,
+              x = x, def.x = cbind(f1, f2),
+              theta1 = theta.new[1:(df1*df2)],
+              theta2 = theta.new[1:(df1*df2) + (df1*df2)],
               df1 = df1,
               df2 = df2,
               model = model1)
   class(ret) <- "bdef"
+
+  RFoptions(printlevel=1, warn_normal_mode=TRUE)
 
   return(ret)
 
