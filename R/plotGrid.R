@@ -45,11 +45,11 @@
 #' tempb2 <- bs(x[, 2], K, intercept = TRUE)
 #' tempW <- matrix(0, n, K^2)
 #' for(i in 1:n) tempW[i,] <- kronecker(tempb1[i,], tempb2[i,])
-#' dx <- cbind(tempW%*%theta1, tempW%*%theta2)
+#' def.x <- cbind(tempW%*%theta1, tempW%*%theta2)
 #' fakeModel <- list(basis = list(B1 = bs(range(x[, 1]), K, intercept = TRUE),
 #'                                B2 = bs(range(x[, 2]), K, intercept = TRUE)),
 #'                   window = list(x = 0:1, y = 0:1),
-#'                   x = x, dx = dx,
+#'                   x = x, def.x = def.x,
 #'                   theta1 = theta1,
 #'                   theta2 = theta2,
 #'                   df1 = K,
@@ -76,7 +76,7 @@ plotGrid <- function(model, nx = 20, ny = 20,
                      persp = FALSE, F1 = NULL, F2 = NULL) {
   theta1 <- model$theta1
   theta2 <- model$theta2
-  dx <- model$dx
+  def.x <- model$def.x
   rx <- model$window$x
   ry <- model$window$y
   if(is.null(model$basis)) {
@@ -111,7 +111,7 @@ plotGrid <- function(model, nx = 20, ny = 20,
   if(plot){
     plot(x, xlim = xl, ylim = yl, col = colorO,
          ylab = expression(y[2]), xlab = expression(y[1]))
-    points(dx, xlim = xl, ylim = yl, col = colorD)
+    points(def.x, xlim = xl, ylim = yl, col = colorD)
     for (i in 1:ny) {
       lines(xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorO)
       lines(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorD)

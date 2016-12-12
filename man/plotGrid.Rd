@@ -62,11 +62,11 @@ tempb1 <- bs(x[, 1], K, intercept = TRUE)
 tempb2 <- bs(x[, 2], K, intercept = TRUE)
 tempW <- matrix(0, n, K^2)
 for(i in 1:n) tempW[i,] <- kronecker(tempb1[i,], tempb2[i,])
-dx <- cbind(tempW\%*\%theta1, tempW\%*\%theta2)
+def.x <- cbind(tempW\%*\%theta1, tempW\%*\%theta2)
 fakeModel <- list(basis = list(B1 = bs(range(x[, 1]), K, intercept = TRUE),
                                B2 = bs(range(x[, 2]), K, intercept = TRUE)),
                   window = list(x = 0:1, y = 0:1),
-                  x = x, dx = dx,
+                  x = x, def.x = def.x,
                   theta1 = theta1,
                   theta2 = theta2,
                   df1 = K,

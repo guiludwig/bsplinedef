@@ -11,7 +11,7 @@
 #' @param x A n times 2 matrix of coordinates for the sampled data points.
 #' @param y A vector of length n with the values taken by the response
 #'                     at the corresponding spatial locations in x.
-#' @param dx A n times 2 matrix of deformed coordinates,
+#' @param def.x A n times 2 matrix of deformed coordinates,
 #' @param df1 Square root of the total degrees of freedom for the tensor
 #'                     product of B-spline basis for the first coordinate.
 #'                     Defaults to 8.
@@ -23,6 +23,10 @@
 #'                     taken for the respective coordinate in the sampled
 #'                     region. Defaults to the range of the columns in
 #'                     argument x.
+#'  @param lambda Penalization parameter. If set to NA (default), this
+#'                     parameter will be estimated. Otherwise, it will use
+#'                     the user supplied value. The parameter is in a log
+#'                     scale, thus ranging from -Inf to +Inf.
 #'  @param ... Additional arguments for RFfit.
 #'
 #' @export
@@ -48,7 +52,7 @@
 #'   (3*x1 + x2)^2/sqrt(9*x1^2 + x2^2)
 #' }
 #' plotGrid(list(window = list(x = range(x1), y = range(x2)),
-#'               x = x, dx = cbind(F1(x1,x2), F2(x1,x2))),
+#'               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
 #'          F1 = F1, F2 = F2, margins = TRUE)
 #' covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) + RMnugget(var = 1)
 #' data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
@@ -87,19 +91,34 @@ bdef <- function(cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget
 
   model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = y))
 
+  # bsplinedef:::likelihoodTarget(c(seq(1, 2*df1*df2), 1))
   if(is.na(lambda)){
-    deform0 <- optim(c(seq(1, 2*df1*df2), 1), likelihoodTarget)$par
+    theta0 <- optim(c(seq(1, 2*df1*df2), 1), likelihoodTarget)$par
   } else {
-    deform0 <- optim(seq(1, 2*df1*df2), likelihoodTarget)$par
+    theta0 <- optim(seq(1, 2*df1*df2), likelihoodTarget)$par
   }
+
+  f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
+  f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
+  if(is.na(lambda)){
+    hat.lambda = theta0
+  } else {
+    hat.lambda = lambda
+  }
+
+  model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y))
+
+  # TODO: Iterate
 
   ret <- list(window = window,
               basis = basis,
-              x = x, dx = dx,
+              lambda = hat.lambda,
+              x = x, def.x = def.x,
               theta1 = theta1,
               theta2 = theta2,
               df1 = df1,
-              df2 = df2)
+              df2 = df2,
+              model = model1)
   class(ret) <- "bdef"
 
   return(ret)

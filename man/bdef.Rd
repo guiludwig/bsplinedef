@@ -32,9 +32,13 @@ Defaults to 8.}
                    taken for the respective coordinate in the sampled
                    region. Defaults to the range of the columns in
                    argument x.
+@param lambda Penalization parameter. If set to NA (default), this
+                   parameter will be estimated. Otherwise, it will use
+                   the user supplied value. The parameter is in a log
+                   scale, thus ranging from -Inf to +Inf.
 @param ... Additional arguments for RFfit.}
 
-\item{dx}{A n times 2 matrix of deformed coordinates,}
+\item{def.x}{A n times 2 matrix of deformed coordinates,}
 }
 \value{
 \code{bdef} returns an object of \code{\link{class}} "bdef"
@@ -64,7 +68,7 @@ F2 <- function(x1,x2) {
   (3*x1 + x2)^2/sqrt(9*x1^2 + x2^2)
 }
 plotGrid(list(window = list(x = range(x1), y = range(x2)),
-              x = x, dx = cbind(F1(x1,x2), F2(x1,x2))),
+              x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
          F1 = F1, F2 = F2, margins = TRUE)
 covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) + RMnugget(var = 1)
 data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
