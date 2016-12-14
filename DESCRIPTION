@@ -7,7 +7,7 @@ Depends:
     RandomFields
 Type: Package
 Title: Spatial Deformation via Tensor Product of B-splines
-Version: 0.1.3
+Version: 0.1.4
 Author: Guilherme Ludwig [aut, cre],
     Ronaldo Dias [aut],
     Paul Sampson [ctb]
@@ -18,8 +18,8 @@ Description: Computes coordinate transformations of the form
     covariance function. The functions f1 and f2 are obtained
     via the tensor product of B-splines, with a regularization
     penalty to ensure f1, f2 are injective functions. The case 
-    for Y Gaussian with Matern covariance is implemented, as 
-    well as documentation for extensions to different spatial 
+    for Y Gaussian with general covariance function is implemented, 
+    as well as documentation for extensions to different spatial 
     covariance functions.
 License: GPL (>= 2)
 Encoding: UTF-8

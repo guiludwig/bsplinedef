@@ -54,7 +54,7 @@
 #' plotGrid(list(window = list(x = range(x1), y = range(x2)),
 #'               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
 #'          F1 = F1, F2 = F2, margins = TRUE)
-#' covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) + RMnugget(var = 1)
+#' covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) + RMnugget(var = .01)
 #' data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 #' y <- as.numeric(unlist(data@data))
 #' test1 <- bdef(x, y) # lambda estimated
@@ -79,9 +79,13 @@ bdef <- function(x, y,
                  cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var = NA),
                  df1 = 6, df2 = 6,
                  window = list(x = range(x[,1]), y = range(x[,2])),
-                 lambda = NA, ...) {
+                 lambda = NA, maxit = 2, ...) {
 
   RFoptions(printlevel=0, warn_normal_mode=FALSE)
+
+  if(maxit < 0){
+    maxit <- 1
+  }
 
   B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE)
   B2 <- bs(range(x[, 2]), df = df2, intercept = TRUE)
@@ -123,9 +127,22 @@ bdef <- function(x, y,
   model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y))
   theta.new <- optim(theta0, likelihoodTarget,
                      DF1 = df1, DF2 = df2, B = basis,
-                     M = model0, X = x, Y = y, L = lambda)$par
+                     M = model1, X = x, Y = y, L = lambda)$par
 
-  # TODO: Iterate
+  it <- 1
+  condition <- TRUE
+  while(it < maxit & condition){
+    model0 <- model1
+    theta0 <- theta.new
+    f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
+    f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
+    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y))
+    theta.new <- optim(theta0, likelihoodTarget,
+                       DF1 = df1, DF2 = df2, B = basis,
+                       M = model1, X = x, Y = y, L = lambda)$par
+    condition <- all(max(abs(theta0 - theta.new)/theta0, 0.0009) < 0.001)
+    it <- it + 1
+  }
 
   ret <- list(window = window,
               basis = basis,
