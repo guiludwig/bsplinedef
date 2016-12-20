@@ -6,7 +6,7 @@
 \usage{
 bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var
   = NA), df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y = range(x[,
-  2])), lambda = NA, ...)
+  2])), lambda = NA, maxit = 2, traceback = FALSE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points.}
@@ -36,6 +36,13 @@ Defaults to 8.}
                    parameter will be estimated. Otherwise, it will use
                    the user supplied value. The parameter is in a log
                    scale, thus ranging from -Inf to +Inf.
+@param maxit The maximum number of iterations between
+                   optimization of the covariance parameters
+                   and estimation of the spline coefficients.
+                   Defaults to 2.
+@param traceback Whether the function will return each step
+                   of the optimization iterations, as a list.
+                   For debugging purposes. Defaults to FALSE.
 @param ... Additional arguments for RFfit.}
 
 \item{def.x}{A n times 2 matrix of deformed coordinates,}
@@ -43,7 +50,8 @@ Defaults to 8.}
 \value{
 \code{bdef} returns an object of \code{\link{class}} "bdef"
 containing at least the following components
-  \item{window}{The w}
+  \item{window}{The rectangular spatial domain in which the
+               data was sampled}
   \item{basis}{list of B-spline basis functions, inherited from
                \code{\link{bs}}, with one set for each coordinate}
   \item{theta1}{B-spline coefficients for the coordinate x1}
@@ -62,21 +70,21 @@ x1 <- runif(n)
 x2 <- runif(n)
 x <- cbind(x1,x2)
 F1 <- function(x1,x2) {
-  (x1 - 2*x2)^2/sqrt(x1^2 + 4*x2^2)
+  x1 # (x1 - 2*x2)^2/sqrt(x1^2 + 4*x2^2)
 }
 F2 <- function(x1,x2) {
-  (3*x1 + x2)^2/sqrt(9*x1^2 + x2^2)
+  sqrt(x1*x2) # (3*x1 + x2)^2/sqrt(9*x1^2 + x2^2)
 }
 plotGrid(list(window = list(x = range(x1), y = range(x2)),
               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
          F1 = F1, F2 = F2, margins = TRUE)
-covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) + RMnugget(var = 1)
+covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) # No nugget
 data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 y <- as.numeric(unlist(data@data))
 test1 <- bdef(x, y) # lambda estimated
 test2 <- bdef(x, y, lambda = -100) # lambda provided by user
-test3 <- bdef(x, y, lambda = 100) # lambda provided by user
-test4 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA)) # No nugget effect (default)
+test3 <- bdef(x, y, lambda = 100) # ditto
+test4 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA)) # No nugget effect
 plotGrid(test1, margins = TRUE)
 plotGrid(test2, margins = TRUE)
 plotGrid(test3, margins = TRUE)
