@@ -83,7 +83,7 @@
 #' @seealso \code{\link{RandomFields}}
 #' @keywords Spatial Statistics
 #' @keywords Functional Data Analysis
-bdef <- function(x, y,
+bdef <- function(x, y, t = NULL, # TODO: implement on T!!
                  cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var = NA),
                  df1 = 6, df2 = 6,
                  window = list(x = range(x[,1]), y = range(x[,2])),
@@ -96,6 +96,16 @@ bdef <- function(x, y,
     maxit <- 1
   }
 
+  # Assuming total separability for now!
+  n <- nrow(x)
+  if(ncol(x)>2){
+    xt <- x[,3]
+    x <- x[,-3]
+    X <- unique(x)
+  } else {
+    X <- x
+  }
+
   B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE)
   B2 <- bs(range(x[, 2]), df = df2, intercept = TRUE)
   basis <- list(B1 = B1, B2 = B2)
@@ -105,7 +115,7 @@ bdef <- function(x, y,
   theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
                as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 2]))))
 
-  model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = y))
+  model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = y, ...))
 
   # bsplinedef:::likelihoodTarget(c(seq(1, 2*df1*df2), 1))
   if(is.na(lambda)){
@@ -135,7 +145,7 @@ bdef <- function(x, y,
     hat.lambda = lambda
   }
 
-  model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y))
+  model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
   theta.new <- optim(theta0, likelihoodTarget,
                      DF1 = df1, DF2 = df2, B = basis,
                      M = model1, X = x, Y = y, L = lambda)$par
@@ -154,7 +164,7 @@ bdef <- function(x, y,
     theta0 <- theta.new
     f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
     f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
-    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y))
+    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
     theta.new <- optim(theta0, likelihoodTarget,
                        DF1 = df1, DF2 = df2, B = basis,
                        M = model1, X = x, Y = y, L = lambda)$par

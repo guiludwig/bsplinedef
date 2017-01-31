@@ -4,9 +4,9 @@
 \alias{bdef}
 \title{Spatial Deformation via B-spline}
 \usage{
-bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var
-  = NA), df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y = range(x[,
-  2])), lambda = NA, maxit = 2, traceback = FALSE, ...)
+bdef(x, y, t = NULL, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) +
+  RMnugget(var = NA), df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y
+  = range(x[, 2])), lambda = NA, maxit = 2, traceback = FALSE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points.}

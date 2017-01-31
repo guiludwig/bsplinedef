@@ -4,3 +4,4 @@ bsplinedef.Rproj
 .RData
 .Ruserdata
 .Rbuildignore
+inst/doc
