@@ -1,6 +1,6 @@
 ---
 title: "An introduction to spatial deformations using B-splines"
-author: "Guilherme Ludwig, Ronaldo Dias"
+author: "Guilherme Ludwig, Ronaldo Dias, Paul Sampson"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 fig_caption: yes
@@ -10,7 +10,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This vignette describes how to install and use the `bsplinedef` package, a package for finding spatial deformations using the tensor product of B-splines. This is a work in progress and subject to change. For now, the package fits the semi-parametric covariance model \[\Gamma(x_1, x_2) =  \sigma^2(\|f_1(x_1,x_2) - f_2(x_1,x_2)\|; \boldsymbol\Delta)\] where $x_1, x_2 \in G \subset \mathbb{R}$ are sampled spatial locations in a geostatistical domain $G;$ $f_1,$ $f_2$ are the tensor product of B-spline functions, with $K_1$ and $K_2$ basis functions, respectively; and $\sigma^2(\cdot)$ is a stationary, isotropic covariance function with parameters $\boldsymbol\Delta$. The parameters $\boldsymbol\Delta$ as well as B-spline coefficients $\boldsymbol\theta_1$ and $\boldsymbol\theta_2$ are estimated by minimizing \[Q(\boldsymbol\theta_1, \boldsymbol\theta_2, \boldsymbol\Delta) \propto |\boldsymbol\Gamma|^{-n/2} \exp\left\{-\frac{1}{2}\left(\mathbf{Y} - \boldsymbol\mu \right)^t \boldsymbol\Gamma^{-1} \left(\mathbf{Y} - \boldsymbol\mu \right)\right\},\] subject to \[ |\mathbf{J}| = \frac{\partial f_1}{\partial x_1} \times \frac{\partial f_2}{\partial x_2} - \frac{\partial f_1}{\partial x_2} \times \frac{\partial f_2}{\partial x_1} > 0.\] 
+This vignette describes how to install and use the `bsplinedef` package, a package for finding spatial deformations using the tensor product of B-splines. This is a work in progress and subject to change. For now, the package fits the semi-parametric covariance model \[\Gamma(x_1, x_2) =  \sigma^2(\|f_1(x_1,x_2) - f_2(x_1,x_2)\|; \boldsymbol\Delta)\] where $x_1, x_2 \in G \subset \mathbb{R}^2$ are sampled spatial locations in a geostatistical domain $G;$ $f_1,$ $f_2$ are the tensor product of B-spline functions, each with $K_1 \times K_2$ basis functions, respectively; and $\sigma^2(\cdot)$ is a stationary, isotropic covariance function with parameters $\boldsymbol\Delta$. The parameters $\boldsymbol\Delta$ as well as B-spline coefficients $\boldsymbol\theta_1$ and $\boldsymbol\theta_2$ are estimated by minimizing \[Q(\boldsymbol\theta_1, \boldsymbol\theta_2, \boldsymbol\Delta) \propto |\boldsymbol\Sigma|^{-n/2} \exp\left\{-\frac{1}{2}\left(\mathbf{Y} - \boldsymbol\mu \right)^t \boldsymbol\Sigma^{-1} \left(\mathbf{Y} - \boldsymbol\mu \right)\right\},\] subject to \[ |\mathbf{J}| = \frac{\partial f_1}{\partial x_1} \times \frac{\partial f_2}{\partial x_2} - \frac{\partial f_1}{\partial x_2} \times \frac{\partial f_2}{\partial x_1} > 0.\] 
 
 ## Installation
 
@@ -41,7 +41,7 @@ F2 <- function(x1, x2) {
 }
 ```
 
-The following figure displays the sampled spatial locations (in black) as well as the deformed locations with coordinates $y_1 = F_1(x_1,x_2)$ and $y_2 = F_2(x_1,x_2)$, in red. The black regular grid is also shown, deformed, in R. The marginal color maps display the functions $F_1$, $F_2.$
+The following figure displays the sampled spatial locations (in black) as well as the deformed locations with coordinates $y_1 = f_1(x_1,x_2)$ and $y_2 = f_2(x_1,x_2)$, in red. The black regular grid is also shown, deformed, in R. The marginal color maps display the functions $f_1$, $f_2.$
 
 ```{r echo=FALSE, fig.align="center", message=FALSE, fig.width=6, fig.height=6}
 library(bsplinedef)
@@ -54,7 +54,7 @@ The `bsplinedef` inherits some syntax from the `RandomFields` package, particula
 
 ```{r message=FALSE}
 # Sets up a Matern covariance model
-covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) # No nugget
+covModel <- RMexp(var = 1, scale = 1) + RMnugget(var = 1)
 data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 # Extracts values from object RFspatialPointsDataFrame
 y  <- as.numeric(unlist(data@data))
@@ -67,43 +67,50 @@ str(x)
 str(y)
 ```
 
-The function `bdef` finds the appropriate deformations $\hat{f}_1,$ $\hat{f}_2,$ as well as estimating the parameters for the spatial covariance function. The default covariance function is a Mat&eacute;rn covariance function plus nugget effect, with differentiability parameter $\nu = 2.5$ (fixed), unknown variance $\sigma_\eta^2$, unknown scale parameter $\gamma$ and unknown nugget effect $\sigma_\varepsilon^2.$ 
+The function `bdef` finds the appropriate deformations $\hat{f}_1,$ $\hat{f}_2,$ as well as estimating the parameters for the spatial covariance function. The default covariance function is a Mat&eacute;rn covariance function plus nugget effect, with differentiability parameter $\nu = 2.5$ (fixed), unknown variance $\sigma_\eta^2$, unknown scale parameter $\gamma$ and unknown nugget effect $\sigma_\varepsilon^2.$ In this case, we need to modify the default action to use an exponential covariance.
 
-For example, fitting the default model to the simulated dataset:
+For example, fitting the model to the simulated dataset:
 
 ```{r}
-model.default <- bdef(x, y)
+# Parameters to be estimated set as NA
+cov.to.estimate <- RMexp(var = NA, scale = NA) + RMnugget(var = NA)
+model <- bdef(x, y, cov.model = cov.to.estimate)
 ```
 
 Estimated parameters can be recovered with
 
 ```{r}
-model.default$theta1 # Spline coefficients for f_1
-model.default$theta2 # Spline coefficients for f_2
-model.default$model # Covariance model
+model$model # Covariance model
 ```
 
-The fitting process supports some customization. For example, from the previous output, we realize that the default covariance might be inappropriate. We may change it with the following command:
+If, for some reason, one needs the spline coefficients, they can also be extracted with
 
 ```{r}
-G <- RMmatern(nu = 2.5, var = NA, scale = NA) # Per RandomFields 
+model$theta1 # Spline coefficients for f_1
+```
+
+The fitting process supports some customization. For example, one may be interested in a different covariance function. We may change it with the following command:
+
+```{r}
+# Value set to $nu = 2.5$
+G <- RMmatern(nu = 2.5, var = NA, scale = NA) # No nugget
 # documentation, values left as NA are to be estimated
-model.correct <- bdef(x, y, cov.model = G)
-model.correct$model
+model.matern <- bdef(x, y, cov.model = G)
+model.matern$model
 ```
 
 ## Plotting tools
 
 We provide two plotting functions along with the `bsplinedef` package. The first one, named `plotGrid`, displays the deformation grid on the data.
 
-```{r echo=FALSE, fig.align="center", message=FALSE, fig.width=6, fig.height=6}
-plotGrid(model.default, margins = TRUE)
+```{r fig.align="center", message=FALSE, fig.width=6, fig.height=6}
+plotGrid(model, margins = TRUE)
 ```
 
 The second function, `plotGDdist`, produces a comparison between sample covariances using the G-domain and D-domain distances for reference. It only works if all sampled sites have more than one observation, which might require pruning of the data to use. It still needs to be fully implemented as of `bsplinedef` version `0.1.6` (for example, the `lines` argument, which prints the estimated covariance function decay, is missing).
 
 ```{r}
-try(plotGDdist(model.default)) # Fails
+try(plotGDdist(model)) # Fails
 ```
 
 ```{r}

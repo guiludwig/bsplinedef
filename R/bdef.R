@@ -1,4 +1,4 @@
-#' Spatial Deformation via B-spline
+#' Spatial Deformation via tensor product of B-splines
 #'
 #' This function finds a spatial deformation for Gaussian processes, based
 #' on the penalized log-likelihood function. The deformation is obtained
@@ -6,35 +6,35 @@
 #'
 #' @param cov.model A model for the covariance function. See \code{\link{RMmodel}}
 #'                     on the RandomFields package for details. Defaults to
-#'                     Mat\'{e}rn model with parameters nu = 2.5 and
-#'                     variance and scale to be estimated.
+#'                     Exponential model with unknown variance and scale, plus
+#'                     a nugget effect.
 #' @param x A n times 2 matrix of coordinates for the sampled data points.
 #' @param y A vector of length n with the values taken by the response
 #'                     at the corresponding spatial locations in x.
 #' @param def.x A n times 2 matrix of deformed coordinates,
 #' @param df1 Square root of the total degrees of freedom for the tensor
 #'                     product of B-spline basis for the first coordinate.
-#'                     Defaults to 8.
+#'                     Defaults to 6.
 #' @param df2 Square root of the total degrees of freedom for the tensor
 #'                     product of B-spline basis for the second coordinate.
-#'                     Defaults to 8.
+#'                     Defaults to 6.
 #' @param window A list with two named entries, "x" and "y", each a length 2
 #'                     numeric vector with the minimum and maximum values
 #'                     taken for the respective coordinate in the sampled
 #'                     region. Defaults to the range of the columns in
 #'                     argument x.
-#'  @param lambda Penalization parameter. If set to NA (default), this
+#' @param lambda Penalization parameter. If set to NA (default), this
 #'                     parameter will be estimated. Otherwise, it will use
 #'                     the user supplied value. The parameter is in a log
 #'                     scale, thus ranging from -Inf to +Inf.
-#'  @param maxit The maximum number of iterations between
+#' @param maxit The maximum number of iterations between
 #'                     optimization of the covariance parameters
 #'                     and estimation of the spline coefficients.
 #'                     Defaults to 2.
-#'  @param traceback Whether the function will return each step
+#' @param traceback Whether the function will return each step
 #'                     of the optimization iterations, as a list.
 #'                     For debugging purposes. Defaults to FALSE.
-#'  @param ... Additional arguments for RFfit.
+#' @param ... Additional arguments for RFfit.
 #'
 #' @export
 #' @return \code{bdef} returns an object of \code{\link{class}} "bdef"
@@ -62,7 +62,7 @@
 #' plotGrid(list(window = list(x = range(x1), y = range(x2)),
 #'               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
 #'          F1 = F1, F2 = F2, margins = TRUE)
-#' covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) # No nugget
+#' covModel <- RMexp(var = 1, scale = 2) + RMnugget(var = 1)
 #' data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 #' y <- as.numeric(unlist(data@data))
 #' test1 <- bdef(x, y) # lambda estimated
@@ -83,8 +83,8 @@
 #' @seealso \code{\link{RandomFields}}
 #' @keywords Spatial Statistics
 #' @keywords Functional Data Analysis
-bdef <- function(x, y, t = NULL, # TODO: implement on T!!
-                 cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var = NA),
+bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
+                 cov.model = RMexp(var = NA, scale = NA) + RMnugget(var = NA),
                  df1 = 6, df2 = 6,
                  window = list(x = range(x[,1]), y = range(x[,2])),
                  lambda = NA, maxit = 2,
@@ -97,13 +97,20 @@ bdef <- function(x, y, t = NULL, # TODO: implement on T!!
   }
 
   # Assuming total separability for now!
+  #!# NEED TO SORT X!!
   n <- nrow(x)
   if(ncol(x)>2){
     xt <- x[,3]
-    x <- x[,-3]
-    X <- unique(x)
+    x <- x[,-1*(3:ncol(x))]
+    uX <- unique(x)
   } else {
-    X <- x
+    uX <- unique(x)
+    xt <- tim
+  }
+  # Averaging values in time, is it necessary?
+  uy <- numeric(nrow(uX))
+  for(k in 1:nrow(uX)){
+    uy <- mean(y[x[,1] == uX[k,1] & x[,2] == uX[k,2]])
   }
 
   B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE)
@@ -115,7 +122,7 @@ bdef <- function(x, y, t = NULL, # TODO: implement on T!!
   theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
                as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 2]))))
 
-  model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = y, ...))
+  model0 <- try(RFfit(model = cov.model, x = uX[,1], y = uX[,2], data = y, ...))
 
   # bsplinedef:::likelihoodTarget(c(seq(1, 2*df1*df2), 1))
   if(is.na(lambda)){

@@ -2,9 +2,9 @@
 % Please edit documentation in R/bdef.R
 \name{bdef}
 \alias{bdef}
-\title{Spatial Deformation via B-spline}
+\title{Spatial Deformation via tensor product of B-splines}
 \usage{
-bdef(x, y, t = NULL, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA) +
+bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
   RMnugget(var = NA), df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y
   = range(x[, 2])), lambda = NA, maxit = 2, traceback = FALSE, ...)
 }
@@ -16,34 +16,38 @@ at the corresponding spatial locations in x.}
 
 \item{cov.model}{A model for the covariance function. See \code{\link{RMmodel}}
 on the RandomFields package for details. Defaults to
-Mat\'{e}rn model with parameters nu = 2.5 and
-variance and scale to be estimated.}
+Exponential model with unknown variance and scale, plus
+a nugget effect.}
 
 \item{df1}{Square root of the total degrees of freedom for the tensor
 product of B-spline basis for the first coordinate.
-Defaults to 8.}
+Defaults to 6.}
 
 \item{df2}{Square root of the total degrees of freedom for the tensor
 product of B-spline basis for the second coordinate.
-Defaults to 8.}
+Defaults to 6.}
 
 \item{window}{A list with two named entries, "x" and "y", each a length 2
-                   numeric vector with the minimum and maximum values
-                   taken for the respective coordinate in the sampled
-                   region. Defaults to the range of the columns in
-                   argument x.
-@param lambda Penalization parameter. If set to NA (default), this
-                   parameter will be estimated. Otherwise, it will use
-                   the user supplied value. The parameter is in a log
-                   scale, thus ranging from -Inf to +Inf.
-@param maxit The maximum number of iterations between
-                   optimization of the covariance parameters
-                   and estimation of the spline coefficients.
-                   Defaults to 2.
-@param traceback Whether the function will return each step
-                   of the optimization iterations, as a list.
-                   For debugging purposes. Defaults to FALSE.
-@param ... Additional arguments for RFfit.}
+numeric vector with the minimum and maximum values
+taken for the respective coordinate in the sampled
+region. Defaults to the range of the columns in
+argument x.}
+
+\item{lambda}{Penalization parameter. If set to NA (default), this
+parameter will be estimated. Otherwise, it will use
+the user supplied value. The parameter is in a log
+scale, thus ranging from -Inf to +Inf.}
+
+\item{maxit}{The maximum number of iterations between
+optimization of the covariance parameters
+and estimation of the spline coefficients.
+Defaults to 2.}
+
+\item{traceback}{Whether the function will return each step
+of the optimization iterations, as a list.
+For debugging purposes. Defaults to FALSE.}
+
+\item{...}{Additional arguments for RFfit.}
 
 \item{def.x}{A n times 2 matrix of deformed coordinates,}
 }
@@ -78,7 +82,7 @@ F2 <- function(x1,x2) {
 plotGrid(list(window = list(x = range(x1), y = range(x2)),
               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
          F1 = F1, F2 = F2, margins = TRUE)
-covModel <- RMmatern(nu = 2.5, var = 1, scale = 2) # No nugget
+covModel <- RMexp(var = 1, scale = 2) + RMnugget(var = 1)
 data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 y <- as.numeric(unlist(data@data))
 test1 <- bdef(x, y) # lambda estimated

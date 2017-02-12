@@ -1,3 +1,10 @@
+#' Scatterplot of sample spatial covariance entries and pairwise distances in G- and D-domain
+#'
+#' This function produces a plot of the upper diagonal sample covariance entries and the
+#' corresponding pairwise distances in the original and deformed coordinates, where the
+#' spatial deformation is obtained with a tensor product of B-spline basis functions,
+#' implemented in the \code{\link{bdef}} function.
+#'
 #' @export
 plotGDdist <- function(model, plot = TRUE, lines = TRUE) {
 

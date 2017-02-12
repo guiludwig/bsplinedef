@@ -5,7 +5,8 @@
 \title{Plot Spatial Deformations from bdef}
 \usage{
 plotGrid(model, nx = 20, ny = 20, colorO = "Black", colorD = "Red",
-  plot = TRUE, margins = FALSE, persp = FALSE, F1 = NULL, F2 = NULL)
+  plot = TRUE, margins = FALSE, persp = FALSE, F1 = NULL, F2 = NULL,
+  ...)
 }
 \arguments{
 \item{model}{An object returned by the function \code{\link{bdef}}.
@@ -32,6 +33,10 @@ tensor product of B-splines is used instead.}
 \item{F2}{Allows the user to supply a function that generates the deformed
 coordinate y2. Defaults to NULL, in which case the
 tensor product of B-splines is used instead.}
+
+\item{...}{Extra parameters to be passed to perspective plot, in particular the
+azymutal direction and colatitude. See \code{\link{persp}} for
+a description.}
 }
 \value{
 \code{plotGrid} invisibly returns the values of the deformation on
@@ -44,24 +49,21 @@ function
 \examples{
 # Example using artificially generated data
 set.seed(1)
-n <- 10
-x1 <- runif(n)
-x2 <- runif(n)
-x <- cbind(x1,x2)
+m <- 10
+x1 <- (0:m)/m
+x2 <- (0:m)/m
+x <- as.matrix(expand.grid(x1,x2))
+n <- nrow(x)
 \dontrun{
-   plot(x, xlim = c(0,1), ylim = c(0,1), pch = letters[1:n])
+   plot(x, xlim = c(0,1), ylim = c(0,1))
 }
-K <- 8
-theta1 <- exp(-0.5*scale(kronecker(1:K - K/2,
-              rep(1,K) + 5*((1:K - K/2)^2)/K^2),
-              center = FALSE, scale = TRUE))
-theta2 <- scale(kronecker(rep(1,K) - ((1:K - K/2)^2)/K^2 + rnorm(K, 0, .1),
-          1:K - K/2),
-          center = FALSE, scale = TRUE)
+K <- 4
 tempb1 <- bs(x[, 1], K, intercept = TRUE)
 tempb2 <- bs(x[, 2], K, intercept = TRUE)
 tempW <- matrix(0, n, K^2)
 for(i in 1:n) tempW[i,] <- kronecker(tempb1[i,], tempb2[i,])
+theta1 <- solve(crossprod(tempW), crossprod(tempW, x[,1] + .2*x[,2]))
+theta2 <- solve(crossprod(tempW), crossprod(tempW, x[,2] - .2*sqrt(x[,1]*x[,2])))
 def.x <- cbind(tempW\%*\%theta1, tempW\%*\%theta2)
 fakeModel <- list(basis = list(B1 = bs(range(x[, 1]), K, intercept = TRUE),
                                B2 = bs(range(x[, 2]), K, intercept = TRUE)),
@@ -73,7 +75,7 @@ fakeModel <- list(basis = list(B1 = bs(range(x[, 1]), K, intercept = TRUE),
                   df2 = K)
  plotGrid(fakeModel)
  plotGrid(fakeModel, margins = TRUE)
- plotGrid(fakeModel, persp = TRUE)
+ plotGrid(fakeModel, persp = TRUE, theta = 15)
  # pdf("sim1.pdf"); plotGrid(fakeModel); dev.off()
  # pdf("sim2.pdf"); plotGrid(fakeModel, margins = TRUE); dev.off()
  # pdf("sim3.pdf"); plotGrid(fakeModel, persp = TRUE); dev.off()
@@ -86,7 +88,7 @@ Guilherme Ludwig and Ronaldo Dias
 To add.
 }
 \seealso{
-\code{\link{geoR::likfit}}
+\code{\link{bdef}}
 }
 \keyword{Analysis}
 \keyword{Data}

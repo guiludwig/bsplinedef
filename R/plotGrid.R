@@ -19,6 +19,9 @@
 #' @param F2 Allows the user to supply a function that generates the deformed
 #'                     coordinate y2. Defaults to NULL, in which case the
 #'                     tensor product of B-splines is used instead.
+#' @param ... Extra parameters to be passed to perspective plot, in particular the
+#'                     azymutal direction and colatitude. See \code{\link{persp}} for
+#'                     a description.
 #'
 #' @export
 #' @return \code{plotGrid} invisibly returns the values of the deformation on
@@ -27,24 +30,21 @@
 #' @examples
 #' # Example using artificially generated data
 #' set.seed(1)
-#' n <- 10
-#' x1 <- runif(n)
-#' x2 <- runif(n)
-#' x <- cbind(x1,x2)
+#' m <- 10
+#' x1 <- (0:m)/m
+#' x2 <- (0:m)/m
+#' x <- as.matrix(expand.grid(x1,x2))
+#' n <- nrow(x)
 #' \dontrun{
-#'    plot(x, xlim = c(0,1), ylim = c(0,1), pch = letters[1:n])
+#'    plot(x, xlim = c(0,1), ylim = c(0,1))
 #' }
-#' K <- 8
-#' theta1 <- exp(-0.5*scale(kronecker(1:K - K/2,
-#'               rep(1,K) + 5*((1:K - K/2)^2)/K^2),
-#'               center = FALSE, scale = TRUE))
-#' theta2 <- scale(kronecker(rep(1,K) - ((1:K - K/2)^2)/K^2 + rnorm(K, 0, .1),
-#'           1:K - K/2),
-#'           center = FALSE, scale = TRUE)
+#' K <- 4
 #' tempb1 <- bs(x[, 1], K, intercept = TRUE)
 #' tempb2 <- bs(x[, 2], K, intercept = TRUE)
 #' tempW <- matrix(0, n, K^2)
 #' for(i in 1:n) tempW[i,] <- kronecker(tempb1[i,], tempb2[i,])
+#' theta1 <- solve(crossprod(tempW), crossprod(tempW, x[,1] + .2*x[,2]))
+#' theta2 <- solve(crossprod(tempW), crossprod(tempW, x[,2] - .2*sqrt(x[,1]*x[,2])))
 #' def.x <- cbind(tempW%*%theta1, tempW%*%theta2)
 #' fakeModel <- list(basis = list(B1 = bs(range(x[, 1]), K, intercept = TRUE),
 #'                                B2 = bs(range(x[, 2]), K, intercept = TRUE)),
@@ -56,7 +56,7 @@
 #'                   df2 = K)
 #'  plotGrid(fakeModel)
 #'  plotGrid(fakeModel, margins = TRUE)
-#'  plotGrid(fakeModel, persp = TRUE)
+#'  plotGrid(fakeModel, persp = TRUE, theta = 15)
 #'  # pdf("sim1.pdf"); plotGrid(fakeModel); dev.off()
 #'  # pdf("sim2.pdf"); plotGrid(fakeModel, margins = TRUE); dev.off()
 #'  # pdf("sim3.pdf"); plotGrid(fakeModel, persp = TRUE); dev.off()
@@ -67,13 +67,13 @@
 #'
 #'   To add.
 #'
-#' @seealso \code{\link{geoR::likfit}}
+#' @seealso \code{\link{bdef}}
 #' @keywords Spatial Statistics
 #' @keywords Functional Data Analysis
 plotGrid <- function(model, nx = 20, ny = 20,
                      colorO = "Black", colorD = "Red",
                      plot = TRUE, margins = FALSE,
-                     persp = FALSE, F1 = NULL, F2 = NULL) {
+                     persp = FALSE, F1 = NULL, F2 = NULL, ...) {
   theta1 <- model$theta1
   theta2 <- model$theta2
   def.x <- model$def.x
@@ -121,20 +121,25 @@ plotGrid <- function(model, nx = 20, ny = 20,
       lines(fgrid[seq((1+(j-1)),nx*ny,nx),], col = colorD)
     }
     if(margins){
-      image(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[nx:1,]),
+      image(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[1:nx,]),
             col = tim.colors(64),
             ylab = expression(x[2]), xlab = expression(x[1]))
-      contour(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[nx:1,]),
+      contour(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[1:nx,]),
               add = TRUE)
-      image(list(x = ygrid, y = xgrid, z = matrix(f1, nx, ny)[ny:1,]),
+      image(list(x = ygrid, y = xgrid, z = matrix(f1, nx, ny)[1:ny,]),
             col = tim.colors(64),
             ylab = expression(x[2]), xlab = expression(x[1]))
-      contour(list(x = ygrid, y = xgrid, z = matrix(f1, nx, ny)[ny:1,]),
+      contour(list(x = ygrid, y = xgrid, z = matrix(f1, nx, ny)[1:ny,]),
               add = TRUE)
     }
     if(persp){
-      persp(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[nx:1,]))
-      persp(list(x = ygrid, y = xgrid, z = matrix(f1, nx, ny)[ny:1,]))
+      # Is this dimension flip correct? Also persp is pretty bad to visualize
+      persp(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[1:nx,]),
+            xlab = expression(x[1]), ylab = expression(x[2]), zlab = expression(y[1]),
+            ...)
+      persp(list(x = ygrid, y = xgrid, z = matrix(f1, nx, ny)[1:ny,]),
+            xlab = expression(x[1]), ylab = expression(x[2]), zlab = expression(y[1]),
+            ...)
     }
   }
   invisible(fgrid)
