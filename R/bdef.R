@@ -8,16 +8,19 @@
 #'                     on the RandomFields package for details. Defaults to
 #'                     Exponential model with unknown variance and scale, plus
 #'                     a nugget effect.
-#' @param x A n times 2 matrix of coordinates for the sampled data points.
-#' @param y A vector of length n with the values taken by the response
-#'                     at the corresponding spatial locations in x.
-#' @param def.x A n times 2 matrix of deformed coordinates,
-#' @param df1 Square root of the total degrees of freedom for the tensor
-#'                     product of B-spline basis for the first coordinate.
-#'                     Defaults to 6.
-#' @param df2 Square root of the total degrees of freedom for the tensor
-#'                     product of B-spline basis for the second coordinate.
-#'                     Defaults to 6.
+#' @param x A n times 2 matrix of coordinates for the sampled data points. The
+#'                     rows must be unique, corresponding to distinct sample
+#'                     locations.
+#' @param y A vector of length n*m with the values taken by the response
+#'                     at the corresponding spatial locations in x, for
+#'                     each time point t_1, ..., t_m.
+#' @param tim A vector of equally spaced time positions, or NULL, in which
+#'                     the temporal component of the model is ignored.
+#'                     Defaults to NULL.
+#' @param df1 Degrees of freedom for the tensor product of splines along
+#'                     the x_1 coordinate. Defaults to 6.
+#' @param df2 Degrees of freedom for the tensor product of splines along
+#'                     the x_2 coordinate. Defaults to 6.
 #' @param window A list with two named entries, "x" and "y", each a length 2
 #'                     numeric vector with the minimum and maximum values
 #'                     taken for the respective coordinate in the sampled
@@ -66,13 +69,24 @@
 #' data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 #' y <- as.numeric(unlist(data@data))
 #' test1 <- bdef(x, y) # lambda estimated
+#' plotGrid(test1, margins = TRUE)
+#' \dontrun{
 #' test2 <- bdef(x, y, lambda = -100) # lambda provided by user
 #' test3 <- bdef(x, y, lambda = 100) # ditto
 #' test4 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA)) # No nugget effect
-#' plotGrid(test1, margins = TRUE)
 #' plotGrid(test2, margins = TRUE)
 #' plotGrid(test3, margins = TRUE)
 #' plotGrid(test4, margins = TRUE)
+#' }
+#' # Time version
+#' covModel2 <- RMexp(proj = "space", var = 1, scale = 1) *
+#'   RMexp(proj = "time", scale = 1)
+#' covModel2m <- RMexp(proj = "space", var = NA, scale = NA) *
+#'   RMexp(proj = "time", scale = NA)
+#' data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:10)
+#' y <- as.numeric(unlist(data2@data))
+#' testT <- bdef(x, y, tim = 1:10, cov.model = covModel2m) # lambda estimated
+#' plotGrid(test1, margins = TRUE)
 #'
 #' @author Guilherme Ludwig and Ronaldo Dias
 #'
@@ -95,22 +109,20 @@ bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
   if(maxit < 0){
     maxit <- 1
   }
+  # if(!is.null(tim) && length(tim) <= 3){
+  #   # CHECK AMBIGUITY
+  # }
 
   # Assuming total separability for now!
   #!# NEED TO SORT X!!
   n <- nrow(x)
+  m <- length(tim)
   if(ncol(x)>2){
-    xt <- x[,3]
+    tim <- unique(x[,3])
     x <- x[,-1*(3:ncol(x))]
-    uX <- unique(x)
+    x <- unique(x)
   } else {
-    uX <- unique(x)
-    xt <- tim
-  }
-  # Averaging values in time, is it necessary?
-  uy <- numeric(nrow(uX))
-  for(k in 1:nrow(uX)){
-    uy <- mean(y[x[,1] == uX[k,1] & x[,2] == uX[k,2]])
+    x <- unique(x)
   }
 
   B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE)
@@ -119,22 +131,40 @@ bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
   W <- matrix(0, n, df1*df2) # TODO debug unequal df
   for(i in 1:n) W[i,] <- kronecker(predict(basis$B1, x[, 1])[i, ],
                                    predict(basis$B2, x[, 2])[i, ])
+
   theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
                as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 2]))))
 
-  model0 <- try(RFfit(model = cov.model, x = uX[,1], y = uX[,2], data = y, ...))
-
-  # bsplinedef:::likelihoodTarget(c(seq(1, 2*df1*df2), 1))
-  if(is.na(lambda)){
-    # theta0 <- optim(c(seq(1, 2*df1*df2), 1), likelihoodTarget)$par
-    theta0 <- optim(c(theta00, 0), likelihoodTarget,
-                    DF1 = df1, DF2 = df2, B = basis,
-                    M = model0, X = x, Y = y, L = lambda)$par
+  if(m == 0){
+    model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = y, ...))
   } else {
-    theta0 <- optim(theta00, likelihoodTarget, # seq(1, 2*df1*df2)
-                    DF1 = df1, DF2 = df2, B = basis,
-                    M = model0, X = x, Y = y, L = lambda)$par
+    # BUG HERE
+    # Idea, optim on RFlikelihood(M, x = f1, y = f2, T = tim, data = Y)$loglikelihood?
+    model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], T = tim, data = y, ...))
   }
+
+  if(m==0){
+    if(is.na(lambda)){
+      theta0 <- optim(c(theta00, 0), likelihoodTarget,
+                      DF1 = df1, DF2 = df2, B = basis,
+                      M = model0, X = x, Y = y, L = lambda)$par
+    } else {
+      theta0 <- optim(theta00, likelihoodTarget, # seq(1, 2*df1*df2)
+                      DF1 = df1, DF2 = df2, B = basis,
+                      M = model0, X = x, Y = y, L = lambda)$par
+    }
+  } else {
+    if(is.na(lambda)){
+      theta0 <- optim(c(theta00, 0), likelihoodTargetTime,
+                      DF1 = df1, DF2 = df2, B = basis,
+                      M = model0, X = x, Y = y, TIM = tim, L = lambda)$par
+    } else {
+      theta0 <- optim(theta00, likelihoodTargetTime, # seq(1, 2*df1*df2)
+                      DF1 = df1, DF2 = df2, B = basis,
+                      M = model0, X = x, Y = y, TIM = tim, L = lambda)$par
+    }
+  }
+
 
   # Traces the deformation map estimation
   if(traceback) {
@@ -152,10 +182,20 @@ bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
     hat.lambda = lambda
   }
 
-  model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
-  theta.new <- optim(theta0, likelihoodTarget,
-                     DF1 = df1, DF2 = df2, B = basis,
-                     M = model1, X = x, Y = y, L = lambda)$par
+  if(m == 0){
+    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
+    theta.new <- optim(theta0, likelihoodTarget,
+                       DF1 = df1, DF2 = df2, B = basis,
+                       M = model1, X = x, Y = y, L = lambda)$par
+  } else {
+    # BUG HERE
+    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
+    theta.new <- optim(theta0, likelihoodTargetTime,
+                       DF1 = df1, DF2 = df2, B = basis,
+                       M = model1, X = x, Y = y, TIM = tim, L = lambda)$par
+  }
+
+
 
   # Traces the deformation map estimation
   if(traceback) {
@@ -171,10 +211,18 @@ bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
     theta0 <- theta.new
     f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
     f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
-    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
-    theta.new <- optim(theta0, likelihoodTarget,
-                       DF1 = df1, DF2 = df2, B = basis,
-                       M = model1, X = x, Y = y, L = lambda)$par
+    if(m == 0){
+      model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
+      theta.new <- optim(theta0, likelihoodTarget,
+                         DF1 = df1, DF2 = df2, B = basis,
+                         M = model1, X = x, Y = y, L = lambda)$par
+    } else {
+      # BUG HERE
+      model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
+      theta.new <- optim(theta0, likelihoodTargetTime,
+                         DF1 = df1, DF2 = df2, B = basis,
+                         M = model1, X = x, Y = y, TIM = tim, L = lambda)$par
+    }
     condition <- all(max(abs(theta0 - theta.new)/theta0, 0.0009) < 0.001)
     it <- it + 1
     # Traces the deformation map estimation

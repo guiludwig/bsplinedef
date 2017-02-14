@@ -9,23 +9,28 @@ bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
   = range(x[, 2])), lambda = NA, maxit = 2, traceback = FALSE, ...)
 }
 \arguments{
-\item{x}{A n times 2 matrix of coordinates for the sampled data points.}
+\item{x}{A n times 2 matrix of coordinates for the sampled data points. The
+rows must be unique, corresponding to distinct sample
+locations.}
 
-\item{y}{A vector of length n with the values taken by the response
-at the corresponding spatial locations in x.}
+\item{y}{A vector of length n*m with the values taken by the response
+at the corresponding spatial locations in x, for
+each time point t_1, ..., t_m.}
+
+\item{tim}{A vector of equally spaced time positions, or NULL, in which
+the temporal component of the model is ignored.
+Defaults to NULL.}
 
 \item{cov.model}{A model for the covariance function. See \code{\link{RMmodel}}
 on the RandomFields package for details. Defaults to
 Exponential model with unknown variance and scale, plus
 a nugget effect.}
 
-\item{df1}{Square root of the total degrees of freedom for the tensor
-product of B-spline basis for the first coordinate.
-Defaults to 6.}
+\item{df1}{Degrees of freedom for the tensor product of splines along
+the x_1 coordinate. Defaults to 6.}
 
-\item{df2}{Square root of the total degrees of freedom for the tensor
-product of B-spline basis for the second coordinate.
-Defaults to 6.}
+\item{df2}{Degrees of freedom for the tensor product of splines along
+the x_2 coordinate. Defaults to 6.}
 
 \item{window}{A list with two named entries, "x" and "y", each a length 2
 numeric vector with the minimum and maximum values
@@ -48,8 +53,6 @@ of the optimization iterations, as a list.
 For debugging purposes. Defaults to FALSE.}
 
 \item{...}{Additional arguments for RFfit.}
-
-\item{def.x}{A n times 2 matrix of deformed coordinates,}
 }
 \value{
 \code{bdef} returns an object of \code{\link{class}} "bdef"
@@ -86,13 +89,24 @@ covModel <- RMexp(var = 1, scale = 2) + RMnugget(var = 1)
 data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 y <- as.numeric(unlist(data@data))
 test1 <- bdef(x, y) # lambda estimated
+plotGrid(test1, margins = TRUE)
+\dontrun{
 test2 <- bdef(x, y, lambda = -100) # lambda provided by user
 test3 <- bdef(x, y, lambda = 100) # ditto
 test4 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA)) # No nugget effect
-plotGrid(test1, margins = TRUE)
 plotGrid(test2, margins = TRUE)
 plotGrid(test3, margins = TRUE)
 plotGrid(test4, margins = TRUE)
+}
+# Time version
+covModel2 <- RMexp(proj = "space", var = 1, scale = 1) *
+  RMexp(proj = "time", scale = 1)
+covModel2m <- RMexp(proj = "space", var = NA, scale = NA) *
+  RMexp(proj = "time", scale = NA)
+data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:10)
+y <- as.numeric(unlist(data2@data))
+testT <- bdef(x, y, tim = 1:10, cov.model = covModel2m) # lambda estimated
+plotGrid(test1, margins = TRUE)
 
 }
 \author{
