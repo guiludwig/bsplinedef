@@ -6,10 +6,39 @@
 #' implemented in the \code{\link{bdef}} function.
 #'
 #' @export
+#'
+#' @examples
+#' set.seed(1)
+#' n <- 40
+#' x1 <- runif(n)
+#' x2 <- runif(n)
+#' x <- cbind(x1,x2)
+#' F1 <- function(x1,x2) {
+#'   x1 # (x1 - 2*x2)^2/sqrt(x1^2 + 4*x2^2)
+#' }
+#' F2 <- function(x1,x2) {
+#'   sqrt(x1*x2) # (3*x1 + x2)^2/sqrt(9*x1^2 + x2^2)
+#' }
+#' plotGrid(list(window = list(x = range(x1), y = range(x2)),
+#'               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
+#'          F1 = F1, F2 = F2, margins = TRUE)
+#' TIME <- 20
+#' covModel2 <- RMexp(proj = "space", var = 1, scale = 1) *
+#'   RMnugget(proj = "time", var = 1)
+#' data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
+#' y <- as.numeric(unlist(data2@data))
+#' \notrun{
+#' matplot(1:TIME, t(matrix(y, ncol = TIME)), type = "b", lty = 1, pch = 1)
+#' }
+#' covModel2m <- RMexp(var = NA, scale = NA) # Only space?
+#' testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m, maxit = 10) # lambda estimated
+#' plotGrid(testT, margins = TRUE)
+#' plotGDdist(testT)
 plotGDdist <- function(model, plot = TRUE, lines = TRUE) {
 
-  x <- model$x
-  y <- model$y
+  if(is.null(model$fullDes)) stop("Please enable the fullDes option in bdef().")
+  x <- model$fullDes$x
+  y <- model$fullDes$y
   spatial.locations <- unique(x)
   p <- nrow(spatial.locations)
   fine <- (length(p) > 0)&&(p>2)
@@ -24,7 +53,9 @@ plotGDdist <- function(model, plot = TRUE, lines = TRUE) {
                error = function(e) simpleError(message = "sites must have equal number of observations."))
     }
   }
+  S <- diag(sample.sigma)
   sample.sigma <- sample.sigma + t(sample.sigma)
+  diag(sample.sigma) <- S
 
   cov.model <- model$model
   Gcoords <- dist(model$x)
@@ -33,11 +64,20 @@ plotGDdist <- function(model, plot = TRUE, lines = TRUE) {
   Dcoords <- as.matrix(Dcoords)
   # G <- RFcovmatrix(model, distances = Gcoords[lower.tri(Gcoords)], dim = nrow(Gcoords))
   # D <- RFcovmatrix(model, distances = Dcoords[lower.tri(Dcoords)], dim = nrow(Dcoords))
-  layout(matrix(1:2, ncol = 2))
-  plot(as.numeric(Gcoords), sample.sigma[lower.tri(sample.sigma)],
-       main = "G-domain")
-  plot(as.numeric(Dcoords), sample.sigma[lower.tri(sample.sigma)],
-       main = "D-domain")
+  layout(matrix(c(1,0,2:3), ncol = 2))
+  plot(as.numeric(Gcoords)[as.numeric(Gcoords)>0],
+       as.numeric(sample.sigma)[as.numeric(Gcoords)>0], # sample.sigma[lower.tri(sample.sigma)],
+       main = "G-domain",
+       ylab = expression("Cov("*Y(s[i])*","*Y(s[j])*")"),
+       xlab = expression("|"*x[i] - x[j]*"|"))
   # TO IMPLEMENT: LINES
-
+  plot(as.numeric(Gcoords)[as.numeric(Gcoords)>0],
+       as.numeric(Dcoords)[as.numeric(Dcoords)>0],
+       xlab = expression("|"*x[i] - x[j]*"|"),
+       ylab = expression("|"*f[i] - f[j]*"|"))
+  plot(as.numeric(Dcoords)[as.numeric(Dcoords)>0],
+       as.numeric(sample.sigma)[as.numeric(Dcoords) >0], # sample.sigma[lower.tri(sample.sigma)],
+       main = "D-domain",
+       ylab = expression("Cov("*Y(s[i])*","*Y(s[j])*")"),
+       xlab = expression("|"*f[i] - f[j]*"|"))
 }

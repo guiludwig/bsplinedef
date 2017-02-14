@@ -7,7 +7,7 @@ Depends:
     RandomFields
 Type: Package
 Title: Spatial Deformation via Tensor Product of B-splines
-Version: 0.1.6
+Version: 0.1.7
 Author: Guilherme Ludwig [aut, cre],
     Ronaldo Dias [aut],
     Paul Sampson [ctb]

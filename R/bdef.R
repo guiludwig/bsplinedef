@@ -4,10 +4,11 @@
 #' on the penalized log-likelihood function. The deformation is obtained
 #' via the tensor product of B-spline basis functions.
 #'
-#' @param cov.model A model for the covariance function. See \code{\link{RMmodel}}
-#'                     on the RandomFields package for details. Defaults to
-#'                     Exponential model with unknown variance and scale, plus
-#'                     a nugget effect.
+#' @param cov.model A model for the spatial covariance function. See
+#'                     \code{\link{RMmodel}} from the RandomFields package
+#'                     for details. Defaults to Exponential model with
+#'                     unknown variance and scale, plus a nugget effect. Right
+#'                     now the model doesn't allow space-time covariance models.
 #' @param x A n times 2 matrix of coordinates for the sampled data points. The
 #'                     rows must be unique, corresponding to distinct sample
 #'                     locations.
@@ -16,11 +17,12 @@
 #'                     each time point t_1, ..., t_m.
 #' @param tim A vector of equally spaced time positions, or NULL, in which
 #'                     the temporal component of the model is ignored.
-#'                     Defaults to NULL.
+#'                     Defaults to NULL. Each time point must have the
+#'                     same corresponding locations as rows in x.
 #' @param df1 Degrees of freedom for the tensor product of splines along
-#'                     the x_1 coordinate. Defaults to 6.
+#'                     the x[,1] coordinate. Defaults to 6.
 #' @param df2 Degrees of freedom for the tensor product of splines along
-#'                     the x_2 coordinate. Defaults to 6.
+#'                     the x[,2] coordinate. Defaults to 6.
 #' @param window A list with two named entries, "x" and "y", each a length 2
 #'                     numeric vector with the minimum and maximum values
 #'                     taken for the respective coordinate in the sampled
@@ -37,6 +39,11 @@
 #' @param traceback Whether the function will return each step
 #'                     of the optimization iterations, as a list.
 #'                     For debugging purposes. Defaults to FALSE.
+#' @param fullDes Whether the returned object will include a processed
+#'                     copy of the dataset. Needed for the
+#'                     \code{\link{plotGDdist}} function, but can be set
+#'                     to FALSE if the user has no interest in GDdist.
+#'                     Defaults to TRUE.
 #' @param ... Additional arguments for RFfit.
 #'
 #' @export
@@ -79,14 +86,17 @@
 #' plotGrid(test4, margins = TRUE)
 #' }
 #' # Time version
+#' TIME <- 20
 #' covModel2 <- RMexp(proj = "space", var = 1, scale = 1) *
-#'   RMexp(proj = "time", scale = 1)
-#' covModel2m <- RMexp(proj = "space", var = NA, scale = NA) *
-#'   RMexp(proj = "time", scale = NA)
-#' data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:10)
+#'   RMnugget(proj = "time", var = 1)
+#' data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
 #' y <- as.numeric(unlist(data2@data))
-#' testT <- bdef(x, y, tim = 1:10, cov.model = covModel2m) # lambda estimated
-#' plotGrid(test1, margins = TRUE)
+#' \notrun{
+#' matplot(1:TIME, t(matrix(y, ncol = TIME)), type = "b", lty = 1, pch = 1)
+#' }
+#' covModel2m <- RMexp(var = NA, scale = NA) # Only space?
+#' testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m) # lambda estimated
+#' plotGrid(testT, margins = TRUE)
 #'
 #' @author Guilherme Ludwig and Ronaldo Dias
 #'
@@ -102,7 +112,7 @@ bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
                  df1 = 6, df2 = 6,
                  window = list(x = range(x[,1]), y = range(x[,2])),
                  lambda = NA, maxit = 2,
-                 traceback = FALSE, ...) {
+                 traceback = FALSE, fullDes = TRUE, ...) {
 
   RFoptions(printlevel=0, warn_normal_mode=FALSE)
 
@@ -140,7 +150,8 @@ bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
   } else {
     # BUG HERE
     # Idea, optim on RFlikelihood(M, x = f1, y = f2, T = tim, data = Y)$loglikelihood?
-    model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], T = tim, data = y, ...))
+    #!# model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], T = tim, data = y, ...))
+    model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = matrix(y, nrow = n), ...))
   }
 
   if(m==0){
@@ -189,7 +200,8 @@ bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
                        M = model1, X = x, Y = y, L = lambda)$par
   } else {
     # BUG HERE
-    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
+    # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
+    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
     theta.new <- optim(theta0, likelihoodTargetTime,
                        DF1 = df1, DF2 = df2, B = basis,
                        M = model1, X = x, Y = y, TIM = tim, L = lambda)$par
@@ -218,7 +230,8 @@ bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
                          M = model1, X = x, Y = y, L = lambda)$par
     } else {
       # BUG HERE
-      model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
+      # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
+      model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
       theta.new <- optim(theta0, likelihoodTargetTime,
                          DF1 = df1, DF2 = df2, B = basis,
                          M = model1, X = x, Y = y, TIM = tim, L = lambda)$par
@@ -246,6 +259,20 @@ bdef <- function(x, y, tim = NULL, # TODO: implement on T!!
   if(traceback){
     ret$trace <- trace
   }
+  if(fullDes){
+    if((!is.null(m)) && m > 1){
+      ret$fullDes <- list(x = cbind(rep(x[,1], m), rep(x[,2], m)),
+                          def.x = cbind(rep(f1, m), rep(f2, m)),
+                          tim = tim,
+                          y = y)
+    } else {
+      ret$fullDes <- list(x = x,
+                          def.x = cbind(f1,f2),
+                          tim = tim,
+                          y = y)
+    }
+  }
+
   class(ret) <- "bdef"
 
   RFoptions(printlevel=1, warn_normal_mode=TRUE)

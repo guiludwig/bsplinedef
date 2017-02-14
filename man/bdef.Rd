@@ -6,7 +6,8 @@
 \usage{
 bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
   RMnugget(var = NA), df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y
-  = range(x[, 2])), lambda = NA, maxit = 2, traceback = FALSE, ...)
+  = range(x[, 2])), lambda = NA, maxit = 2, traceback = FALSE,
+  fullDes = TRUE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The
@@ -19,18 +20,20 @@ each time point t_1, ..., t_m.}
 
 \item{tim}{A vector of equally spaced time positions, or NULL, in which
 the temporal component of the model is ignored.
-Defaults to NULL.}
+Defaults to NULL. Each time point must have the
+same corresponding locations as rows in x.}
 
-\item{cov.model}{A model for the covariance function. See \code{\link{RMmodel}}
-on the RandomFields package for details. Defaults to
-Exponential model with unknown variance and scale, plus
-a nugget effect.}
+\item{cov.model}{A model for the spatial covariance function. See
+\code{\link{RMmodel}} from the RandomFields package
+for details. Defaults to Exponential model with
+unknown variance and scale, plus a nugget effect. Right
+now the model doesn't allow space-time covariance models.}
 
 \item{df1}{Degrees of freedom for the tensor product of splines along
-the x_1 coordinate. Defaults to 6.}
+the x[,1] coordinate. Defaults to 6.}
 
 \item{df2}{Degrees of freedom for the tensor product of splines along
-the x_2 coordinate. Defaults to 6.}
+the x[,2] coordinate. Defaults to 6.}
 
 \item{window}{A list with two named entries, "x" and "y", each a length 2
 numeric vector with the minimum and maximum values
@@ -51,6 +54,12 @@ Defaults to 2.}
 \item{traceback}{Whether the function will return each step
 of the optimization iterations, as a list.
 For debugging purposes. Defaults to FALSE.}
+
+\item{fullDes}{Whether the returned object will include a processed
+copy of the dataset. Needed for the
+\code{\link{plotGDdist}} function, but can be set
+to FALSE if the user has no interest in GDdist.
+Defaults to TRUE.}
 
 \item{...}{Additional arguments for RFfit.}
 }
@@ -99,14 +108,17 @@ plotGrid(test3, margins = TRUE)
 plotGrid(test4, margins = TRUE)
 }
 # Time version
+TIME <- 20
 covModel2 <- RMexp(proj = "space", var = 1, scale = 1) *
-  RMexp(proj = "time", scale = 1)
-covModel2m <- RMexp(proj = "space", var = NA, scale = NA) *
-  RMexp(proj = "time", scale = NA)
-data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:10)
+  RMnugget(proj = "time", var = 1)
+data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
 y <- as.numeric(unlist(data2@data))
-testT <- bdef(x, y, tim = 1:10, cov.model = covModel2m) # lambda estimated
-plotGrid(test1, margins = TRUE)
+\\notrun{
+matplot(1:TIME, t(matrix(y, ncol = TIME)), type = "b", lty = 1, pch = 1)
+}
+covModel2m <- RMexp(var = NA, scale = NA) # Only space?
+testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m) # lambda estimated
+plotGrid(testT, margins = TRUE)
 
 }
 \author{

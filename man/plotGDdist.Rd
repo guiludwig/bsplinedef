@@ -12,4 +12,32 @@ corresponding pairwise distances in the original and deformed coordinates, where
 spatial deformation is obtained with a tensor product of B-spline basis functions,
 implemented in the \code{\link{bdef}} function.
 }
+\examples{
+set.seed(1)
+n <- 40
+x1 <- runif(n)
+x2 <- runif(n)
+x <- cbind(x1,x2)
+F1 <- function(x1,x2) {
+  x1 # (x1 - 2*x2)^2/sqrt(x1^2 + 4*x2^2)
+}
+F2 <- function(x1,x2) {
+  sqrt(x1*x2) # (3*x1 + x2)^2/sqrt(9*x1^2 + x2^2)
+}
+plotGrid(list(window = list(x = range(x1), y = range(x2)),
+              x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
+         F1 = F1, F2 = F2, margins = TRUE)
+TIME <- 20
+covModel2 <- RMexp(proj = "space", var = 1, scale = 1) *
+  RMnugget(proj = "time", var = 1)
+data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
+y <- as.numeric(unlist(data2@data))
+\\notrun{
+matplot(1:TIME, t(matrix(y, ncol = TIME)), type = "b", lty = 1, pch = 1)
+}
+covModel2m <- RMexp(var = NA, scale = NA) # Only space?
+testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m, maxit = 10) # lambda estimated
+plotGrid(testT, margins = TRUE)
+plotGDdist(testT)
+}
 
