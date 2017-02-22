@@ -28,10 +28,6 @@
 #'                     taken for the respective coordinate in the sampled
 #'                     region. Defaults to the range of the columns in
 #'                     argument x.
-#' @param lambda Penalization parameter. If set to NA (default), this
-#'                     parameter will be estimated. Otherwise, it will use
-#'                     the user supplied value. The parameter is in a log
-#'                     scale, thus ranging from -Inf to +Inf.
 #' @param maxit The maximum number of iterations between
 #'                     optimization of the covariance parameters
 #'                     and estimation of the spline coefficients.
@@ -132,8 +128,7 @@ bdef <- function(x, y, tim = NULL,
                  cov.model = RMexp(var = NA, scale = NA) + RMnugget(var = NA),
                  df1 = 6, df2 = 6,
                  window = list(x = range(x[,1]), y = range(x[,2])),
-                 lambda = NA, maxit = 2,
-                 traceback = FALSE, fullDes = TRUE, ...) {
+                 maxit = 2, traceback = FALSE, fullDes = TRUE, ...) {
 
   RFoptions(printlevel=0, warn_normal_mode=FALSE)
 
@@ -174,29 +169,18 @@ bdef <- function(x, y, tim = NULL,
   }
 
   if(m==0){
-    if(is.na(lambda)){
-      #!!# TESTING
-      jacobianConstraint(theta00, df1, df2, basis, x)
-      theta0 <- optim(c(theta00, 0), likelihoodTarget,
-                      DF1 = df1, DF2 = df2, B = basis,
-                      M = model0, X = x, Y = y, L = lambda)$par
-    } else {
-      theta0 <- optim(theta00, likelihoodTarget,
-                      DF1 = df1, DF2 = df2, B = basis,
-                      M = model0, X = x, Y = y, L = lambda)$par
-    }
+    theta0 <- auglag(theta00,
+                     fn = likelihoodTarget, # gr = NULL
+                     hin = jacobianConstraint, # hin.jac = NULL
+                     DF1 = df1, DF2 = df2, B = basis,
+                     M = model0, X = x, Y = y)$par
   } else {
-    if(is.na(lambda)){
-      theta0 <- optim(c(theta00, 0), likelihoodTargetTime,
-                      DF1 = df1, DF2 = df2, B = basis,
-                      M = model0, X = x, Y = y, TIM = tim, L = lambda)$par
-    } else {
-      theta0 <- optim(theta00, likelihoodTargetTime,
-                      DF1 = df1, DF2 = df2, B = basis,
-                      M = model0, X = x, Y = y, TIM = tim, L = lambda)$par
-    }
+    theta0 <- auglag(theta00,
+                     fn = likelihoodTargetTime, # gr = NULL
+                     hin = jacobianConstraint, # hin.jac = NULL
+                     DF1 = df1, DF2 = df2, B = basis,
+                     M = model0, X = x, Y = y, TIM = tim)$par
   }
-
 
   # Traces the deformation map estimation
   if(traceback) {
@@ -208,27 +192,23 @@ bdef <- function(x, y, tim = NULL,
 
   f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
   f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
-  if(is.na(lambda)){
-    hat.lambda = theta0[2*df1*df2+1]
-  } else {
-    hat.lambda = lambda
-  }
 
   if(m == 0){
     model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
-    theta.new <- optim(theta0, likelihoodTarget,
-                       DF1 = df1, DF2 = df2, B = basis,
-                       M = model1, X = x, Y = y, L = lambda)$par
+    theta.new <- auglag(theta0,
+                        fn = likelihoodTarget, # gr = NULL
+                        hin = jacobianConstraint, # hin.jac = NULL
+                        DF1 = df1, DF2 = df2, B = basis,
+                        M = model0, X = x, Y = y)$par
   } else {
-    # BUG HERE
     # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
     model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
-    theta.new <- optim(theta0, likelihoodTargetTime,
-                       DF1 = df1, DF2 = df2, B = basis,
-                       M = model1, X = x, Y = y, TIM = tim, L = lambda)$par
+    theta.new <- auglag(theta0,
+                        fn = likelihoodTargetTime, # gr = NULL
+                        hin = jacobianConstraint, # hin.jac = NULL
+                        DF1 = df1, DF2 = df2, B = basis,
+                        M = model0, X = x, Y = y, TIM = tim)$par
   }
-
-
 
   # Traces the deformation map estimation
   if(traceback) {
@@ -246,18 +226,22 @@ bdef <- function(x, y, tim = NULL,
     f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
     if(m == 0){
       model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
-      theta.new <- optim(theta0, likelihoodTarget,
-                         DF1 = df1, DF2 = df2, B = basis,
-                         M = model1, X = x, Y = y, L = lambda)$par
+      theta.new <- auglag(theta0,
+                          fn = likelihoodTarget, # gr = NULL
+                          hin = jacobianConstraint, # hin.jac = NULL
+                          DF1 = df1, DF2 = df2, B = basis,
+                          M = model0, X = x, Y = y)$par
     } else {
       # BUG HERE
       # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
       model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
-      theta.new <- optim(theta0, likelihoodTargetTime,
-                         DF1 = df1, DF2 = df2, B = basis,
-                         M = model1, X = x, Y = y, TIM = tim, L = lambda)$par
+      theta.new <- auglag(theta0,
+                          fn = likelihoodTargetTime, # gr = NULL
+                          hin = jacobianConstraint, # hin.jac = NULL
+                          DF1 = df1, DF2 = df2, B = basis,
+                          M = model0, X = x, Y = y, TIM = tim)$par
     }
-    condition <- TRUE #all(max(abs(theta0 - theta.new)/theta0, 0.0009) < 0.001)
+    condition <- all(max(abs(theta0 - theta.new)/abs(theta0), 0.0009) < 0.001)
     it <- it + 1
     # Traces the deformation map estimation
     if(traceback) {
@@ -269,7 +253,6 @@ bdef <- function(x, y, tim = NULL,
 
   ret <- list(window = window,
               basis = basis,
-              lambda = hat.lambda,
               x = x, def.x = cbind(f1, f2),
               theta1 = theta.new[1:(df1*df2)],
               theta2 = theta.new[1:(df1*df2) + (df1*df2)],

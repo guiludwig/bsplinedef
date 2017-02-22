@@ -6,8 +6,7 @@
 \usage{
 bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
   RMnugget(var = NA), df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y
-  = range(x[, 2])), lambda = NA, maxit = 2, traceback = FALSE,
-  fullDes = TRUE, ...)
+  = range(x[, 2])), maxit = 2, traceback = FALSE, fullDes = TRUE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The
@@ -40,11 +39,6 @@ numeric vector with the minimum and maximum values
 taken for the respective coordinate in the sampled
 region. Defaults to the range of the columns in
 argument x.}
-
-\item{lambda}{Penalization parameter. If set to NA (default), this
-parameter will be estimated. Otherwise, it will use
-the user supplied value. The parameter is in a log
-scale, thus ranging from -Inf to +Inf.}
 
 \item{maxit}{The maximum number of iterations between
 optimization of the covariance parameters
