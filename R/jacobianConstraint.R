@@ -1,6 +1,6 @@
 jacobianConstraint <- function(theta,
-         DF1 = df1, DF2 = df2,
-         B = basis, X = x, ...){
+         DF1 = df1, DF2 = df2, B = basis, # After here not used, match?
+         M = model0, X = x, Y = y){
 
   n <- nrow(X)
   theta1 <- matrix(theta[1:(DF1*DF2)], nrow = DF1, ncol = DF2)

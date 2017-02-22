@@ -55,7 +55,7 @@
 #' @examples
 #' # Example using artificially generated data
 #' set.seed(1)
-#' n <- 100
+#' n <- 40
 #' x1 <- runif(n)
 #' x2 <- runif(n)
 #' x <- cbind(x1,x2)
@@ -169,17 +169,17 @@ bdef <- function(x, y, tim = NULL,
   }
 
   if(m==0){
-    theta0 <- auglag(theta00,
+    theta0 <- auglag(par = theta00,
                      fn = likelihoodTarget, # gr = NULL
                      hin = jacobianConstraint, # hin.jac = NULL
                      DF1 = df1, DF2 = df2, B = basis,
                      M = model0, X = x, Y = y)$par
   } else {
     theta0 <- auglag(theta00,
-                     fn = likelihoodTargetTime, # gr = NULL
+                     fn = likelihoodTarget, # gr = NULL
                      hin = jacobianConstraint, # hin.jac = NULL
                      DF1 = df1, DF2 = df2, B = basis,
-                     M = model0, X = x, Y = y, TIM = tim)$par
+                     M = model0, X = x, Y = matrix(y, ncol = m))$par
   }
 
   # Traces the deformation map estimation
@@ -204,10 +204,10 @@ bdef <- function(x, y, tim = NULL,
     # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
     model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
     theta.new <- auglag(theta0,
-                        fn = likelihoodTargetTime, # gr = NULL
+                        fn = likelihoodTarget, # gr = NULL
                         hin = jacobianConstraint, # hin.jac = NULL
                         DF1 = df1, DF2 = df2, B = basis,
-                        M = model0, X = x, Y = y, TIM = tim)$par
+                        M = model0, X = x, Y = matrix(y, ncol = m))$par
   }
 
   # Traces the deformation map estimation
@@ -236,10 +236,10 @@ bdef <- function(x, y, tim = NULL,
       # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
       model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
       theta.new <- auglag(theta0,
-                          fn = likelihoodTargetTime, # gr = NULL
+                          fn = likelihoodTarget, # gr = NULL
                           hin = jacobianConstraint, # hin.jac = NULL
                           DF1 = df1, DF2 = df2, B = basis,
-                          M = model0, X = x, Y = y, TIM = tim)$par
+                          M = model0, X = x, Y = matrix(y, ncol = m))$par
     }
     condition <- all(max(abs(theta0 - theta.new)/abs(theta0), 0.0009) < 0.001)
     it <- it + 1

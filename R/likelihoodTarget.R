@@ -2,7 +2,7 @@ likelihoodTarget <- function(theta,
                              DF1 = df1, DF2 = df2, B = basis,
                              M = model0, X = x, Y = y){
 
-  n <- length(Y)
+  n <- nrow(X) #!# length(Y)
   W <- matrix(0, n, DF1*DF2)
   for(i in 1:n) W[i,] <- kronecker(predict(B$B1, X[, 1])[i, ],
                                    predict(B$B2, X[, 2])[i, ])
