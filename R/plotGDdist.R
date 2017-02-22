@@ -23,7 +23,7 @@
 #'               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
 #'          F1 = F1, F2 = F2, margins = TRUE)
 #' TIME <- 20
-#' covModel2 <- RMexp(proj = "space", var = 1, scale = 1) *
+#' covModel2 <- RMexp(proj = "space", var = 1, scale = .25) *
 #'   RMnugget(proj = "time", var = 1)
 #' data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
 #' y <- as.numeric(unlist(data2@data))

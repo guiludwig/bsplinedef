@@ -81,15 +81,15 @@ via the tensor product of B-spline basis functions.
 \examples{
 # Example using artificially generated data
 set.seed(1)
-n <- 40
+n <- 100
 x1 <- runif(n)
 x2 <- runif(n)
 x <- cbind(x1,x2)
 F1 <- function(x1,x2) {
-  x1 # (x1 - 2*x2)^2/sqrt(x1^2 + 4*x2^2)
+  x1
 }
 F2 <- function(x1,x2) {
-  sqrt(x1*x2) # (3*x1 + x2)^2/sqrt(9*x1^2 + x2^2)
+  sqrt(x1*x2)
 }
 plotGrid(list(window = list(x = range(x1), y = range(x2)),
               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
@@ -97,28 +97,49 @@ plotGrid(list(window = list(x = range(x1), y = range(x2)),
 covModel <- RMexp(var = 1, scale = 2) + RMnugget(var = 1)
 data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 y <- as.numeric(unlist(data@data))
-test1 <- bdef(x, y) # lambda estimated
+test1 <- bdef(x, y)
 plotGrid(test1, margins = TRUE)
-\dontrun{
-test2 <- bdef(x, y, lambda = -100) # lambda provided by user
-test3 <- bdef(x, y, lambda = 100) # ditto
-test4 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA)) # No nugget effect
-plotGrid(test2, margins = TRUE)
-plotGrid(test3, margins = TRUE)
-plotGrid(test4, margins = TRUE)
-}
+# \dontrun{
+# test1 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA))
+# plotGrid(test2, margins = TRUE)
+# }
 # Time version
 TIME <- 20
-covModel2 <- RMexp(proj = "space", var = 1, scale = 1) *
+covModel2 <- RMexp(proj = "space", var = 1, scale = .25) *
   RMnugget(proj = "time", var = 1)
 data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
 y <- as.numeric(unlist(data2@data))
-\\notrun{
-matplot(1:TIME, t(matrix(y, ncol = TIME)), type = "b", lty = 1, pch = 1)
-}
+# \dontrun{
+# matplot(1:TIME, t(matrix(y, ncol = TIME)), type = "b", lty = 1, pch = 1)
+# }
 covModel2m <- RMexp(var = NA, scale = NA) # Only space?
-testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m) # lambda estimated
+system.time({testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m,
+              maxit = 10, traceback = TRUE)})
 plotGrid(testT, margins = TRUE)
+plotGrid(list(basis = testT$basis,
+              window = testT$window,
+              x = testT$x,
+              def.x = testT$x, # Fix here
+              theta1 = testT$trace[[2]]$theta1,
+              theta2 = testT$trace[[2]]$theta2,
+              df1 = 6,
+              df2 = 6), margins = TRUE)
+              plotGrid(list(basis = testT$basis,
+              window = testT$window,
+              x = testT$x,
+              def.x = testT$x, # Fix here
+              theta1 = testT$trace[[4]]$theta1,
+              theta2 = testT$trace[[4]]$theta2,
+              df1 = 6,
+              df2 = 6), margins = TRUE)
+              plotGrid(list(basis = testT$basis,
+              window = testT$window,
+              x = testT$x,
+              def.x = testT$x, # Fix here
+              theta1 = testT$trace[[6]]$theta1,
+              theta2 = testT$trace[[6]]$theta2,
+              df1 = 6,
+              df2 = 6), margins = TRUE)
 
 }
 \author{

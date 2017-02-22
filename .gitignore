@@ -5,3 +5,4 @@ bsplinedef.Rproj
 .Ruserdata
 .Rbuildignore
 inst/doc
+.gitignore

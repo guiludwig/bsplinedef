@@ -4,10 +4,11 @@ Depends:
     MASS,
     splines,
     fields,
-    RandomFields
+    RandomFields,
+    alabama
 Type: Package
 Title: Spatial Deformation via Tensor Product of B-splines
-Version: 0.1.7
+Version: 0.1.8
 Author: Guilherme Ludwig [aut, cre],
     Ronaldo Dias [aut],
     Paul Sampson [ctb]
