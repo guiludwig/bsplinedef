@@ -172,12 +172,16 @@ bdef <- function(x, y, tim = NULL,
     theta0 <- auglag(par = theta00,
                      fn = likelihoodTarget, # gr = NULL
                      hin = jacobianConstraint, # hin.jac = NULL
+                     control.outer = list(trace = FALSE,
+                                          kkt2.check = FALSE),
                      DF1 = df1, DF2 = df2, B = basis,
                      M = model0, X = x, Y = y)$par
   } else {
     theta0 <- auglag(theta00,
                      fn = likelihoodTarget, # gr = NULL
                      hin = jacobianConstraint, # hin.jac = NULL
+                     control.outer = list(trace = FALSE,
+                                          kkt2.check = FALSE),
                      DF1 = df1, DF2 = df2, B = basis,
                      M = model0, X = x, Y = matrix(y, ncol = m))$par
   }
@@ -198,6 +202,8 @@ bdef <- function(x, y, tim = NULL,
     theta.new <- auglag(theta0,
                         fn = likelihoodTarget, # gr = NULL
                         hin = jacobianConstraint, # hin.jac = NULL
+                        control.outer = list(trace = FALSE,
+                                             kkt2.check = FALSE),
                         DF1 = df1, DF2 = df2, B = basis,
                         M = model0, X = x, Y = y)$par
   } else {
@@ -206,6 +212,8 @@ bdef <- function(x, y, tim = NULL,
     theta.new <- auglag(theta0,
                         fn = likelihoodTarget, # gr = NULL
                         hin = jacobianConstraint, # hin.jac = NULL
+                        control.outer = list(trace = FALSE,
+                                             kkt2.check = FALSE),
                         DF1 = df1, DF2 = df2, B = basis,
                         M = model0, X = x, Y = matrix(y, ncol = m))$par
   }
@@ -229,6 +237,8 @@ bdef <- function(x, y, tim = NULL,
       theta.new <- auglag(theta0,
                           fn = likelihoodTarget, # gr = NULL
                           hin = jacobianConstraint, # hin.jac = NULL
+                          control.outer = list(trace = FALSE,
+                                               kkt2.check = FALSE),
                           DF1 = df1, DF2 = df2, B = basis,
                           M = model0, X = x, Y = y)$par
     } else {
@@ -238,6 +248,8 @@ bdef <- function(x, y, tim = NULL,
       theta.new <- auglag(theta0,
                           fn = likelihoodTarget, # gr = NULL
                           hin = jacobianConstraint, # hin.jac = NULL
+                          control.outer = list(trace = FALSE,
+                                               kkt2.check = FALSE),
                           DF1 = df1, DF2 = df2, B = basis,
                           M = model0, X = x, Y = matrix(y, ncol = m))$par
     }
