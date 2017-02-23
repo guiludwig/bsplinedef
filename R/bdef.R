@@ -171,7 +171,7 @@ bdef <- function(x, y, tim = NULL,
   if(m==0){
     theta0 <- auglag(par = theta00,
                      fn = likelihoodTarget, # gr = NULL
-                     hin = jacobianConstraint, # hin.jac = NULL
+                     hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                      control.outer = list(trace = FALSE,
                                           kkt2.check = FALSE),
                      DF1 = df1, DF2 = df2, B = basis,
@@ -179,7 +179,7 @@ bdef <- function(x, y, tim = NULL,
   } else {
     theta0 <- auglag(theta00,
                      fn = likelihoodTarget, # gr = NULL
-                     hin = jacobianConstraint, # hin.jac = NULL
+                     hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                      control.outer = list(trace = FALSE,
                                           kkt2.check = FALSE),
                      DF1 = df1, DF2 = df2, B = basis,
@@ -201,7 +201,7 @@ bdef <- function(x, y, tim = NULL,
     model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
     theta.new <- auglag(theta0,
                         fn = likelihoodTarget, # gr = NULL
-                        hin = jacobianConstraint, # hin.jac = NULL
+                        hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                         control.outer = list(trace = FALSE,
                                              kkt2.check = FALSE),
                         DF1 = df1, DF2 = df2, B = basis,
@@ -211,7 +211,7 @@ bdef <- function(x, y, tim = NULL,
     model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
     theta.new <- auglag(theta0,
                         fn = likelihoodTarget, # gr = NULL
-                        hin = jacobianConstraint, # hin.jac = NULL
+                        hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                         control.outer = list(trace = FALSE,
                                              kkt2.check = FALSE),
                         DF1 = df1, DF2 = df2, B = basis,
@@ -236,7 +236,7 @@ bdef <- function(x, y, tim = NULL,
       model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
       theta.new <- auglag(theta0,
                           fn = likelihoodTarget, # gr = NULL
-                          hin = jacobianConstraint, # hin.jac = NULL
+                          hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                           control.outer = list(trace = FALSE,
                                                kkt2.check = FALSE),
                           DF1 = df1, DF2 = df2, B = basis,
@@ -247,7 +247,7 @@ bdef <- function(x, y, tim = NULL,
       model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
       theta.new <- auglag(theta0,
                           fn = likelihoodTarget, # gr = NULL
-                          hin = jacobianConstraint, # hin.jac = NULL
+                          hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                           control.outer = list(trace = FALSE,
                                                kkt2.check = FALSE),
                           DF1 = df1, DF2 = df2, B = basis,
