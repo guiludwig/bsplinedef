@@ -75,7 +75,7 @@ via the tensor product of B-spline basis functions.
 \examples{
 # Example using artificially generated data
 set.seed(1)
-n <- 100
+n <- 40
 x1 <- runif(n)
 x2 <- runif(n)
 x <- cbind(x1,x2)

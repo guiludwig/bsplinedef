@@ -176,6 +176,17 @@ bdef <- function(x, y, tim = NULL,
                                           kkt2.check = FALSE),
                      DF1 = df1, DF2 = df2, B = basis,
                      M = model0, X = x, Y = y)$par
+    # AVALIAR FUNCAO COM THETA1, THETA2 ao inves de funcao generica
+    # TEstar valores inicials == valores verdadeiros
+    # Graficar a penalidade
+    # fakeModel <- list(basis = basis,
+    #                   window = window,
+    #                   x = x, def.x = x,
+    #                   theta1 = theta0[1:(df1*df2)],
+    #                   theta2 = theta0[df1*df2 + 1:(df1*df2)],
+    #                   df1 = df1,
+    #                   df2 = df2)
+    # plotGrid(fakeModel)
   } else {
     theta0 <- auglag(theta00,
                      fn = likelihoodTarget, # gr = NULL

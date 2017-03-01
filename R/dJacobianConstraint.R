@@ -1,6 +1,6 @@
-dJacobianConstraint <- jacobianConstraint <- function(theta,
-                                                      DF1 = df1, DF2 = df2, B = basis, # After here not used, match?
-                                                      M = model0, X = x, Y = y){
+dJacobianConstraint <- function(theta,
+                                DF1 = df1, DF2 = df2, B = basis, # After here not used, match?
+                                M = model0, X = x, Y = y){
 
   # Since jacobianConstraint is f : R^K -> R^n,
   # this needs to return a n x K matrix.

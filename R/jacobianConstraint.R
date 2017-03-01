@@ -1,6 +1,6 @@
 jacobianConstraint <- function(theta,
-         DF1 = df1, DF2 = df2, B = basis, # After here not used, match?
-         M = model0, X = x, Y = y){
+                               DF1 = df1, DF2 = df2, B = basis, # After here not used, match?
+                               M = model0, X = x, Y = y){
 
   n <- nrow(X)
   theta1 <- matrix(theta[1:(DF1*DF2)], nrow = DF1, ncol = DF2)
@@ -25,10 +25,10 @@ jacobianConstraint <- function(theta,
   B2 <- predict(B$B2, X[ , 2, drop = FALSE])
 
   for(i in 1:n){
-    t1b1 <- theta1%*%B1[i,]
-    t1b2 <- theta1%*%B2[i,]
-    t2b1 <- theta2%*%B1[i,]
-    t2b2 <- theta2%*%B2[i,]
+    t1b1 <- theta1%*%dB1[i,]
+    t1b2 <- theta1%*%dB2[i,]
+    t2b1 <- theta2%*%dB1[i,]
+    t2b2 <- theta2%*%dB2[i,]
     PEN[i] <- as.numeric(B1[i,]%*%(tcrossprod(t2b2,t1b1) - tcrossprod(t1b2,t2b1))%*%B2[i,])
   }
 
