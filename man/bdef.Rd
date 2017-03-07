@@ -29,10 +29,10 @@ unknown variance and scale, plus a nugget effect. Right
 now the model doesn't allow space-time covariance models.}
 
 \item{df1}{Degrees of freedom for the tensor product of splines along
-the x[,1] coordinate. Defaults to 6.}
+the x[,1] coordinate. Defaults to 4.}
 
 \item{df2}{Degrees of freedom for the tensor product of splines along
-the x[,2] coordinate. Defaults to 6.}
+the x[,2] coordinate. Defaults to 4.}
 
 \item{window}{A list with two named entries, "x" and "y", each a length 2
 numeric vector with the minimum and maximum values
@@ -88,7 +88,7 @@ F2 <- function(x1,x2) {
 plotGrid(list(window = list(x = range(x1), y = range(x2)),
               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
          F1 = F1, F2 = F2, margins = TRUE)
-covModel <- RMexp(var = 1, scale = 2) + RMnugget(var = 1)
+covModel <- RMexp(var = .2, scale = 1) + RMnugget(var = .2)
 data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 y <- as.numeric(unlist(data@data))
 test1 <- bdef(x, y)
@@ -136,18 +136,17 @@ plotGrid(list(basis = testT$basis,
               df2 = 6), margins = TRUE)
 
 }
-\author{
-Guilherme Ludwig and Ronaldo Dias
-}
 \references{
 To add.
 }
 \seealso{
 \code{\link{RandomFields}}
 }
+\author{
+Guilherme Ludwig and Ronaldo Dias
+}
 \keyword{Analysis}
 \keyword{Data}
 \keyword{Functional}
 \keyword{Spatial}
 \keyword{Statistics}
-

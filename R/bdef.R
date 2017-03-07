@@ -20,9 +20,9 @@
 #'                     Defaults to NULL. Each time point must have the
 #'                     same corresponding locations as rows in x.
 #' @param df1 Degrees of freedom for the tensor product of splines along
-#'                     the x[,1] coordinate. Defaults to 6.
+#'                     the x[,1] coordinate. Defaults to 4.
 #' @param df2 Degrees of freedom for the tensor product of splines along
-#'                     the x[,2] coordinate. Defaults to 6.
+#'                     the x[,2] coordinate. Defaults to 4.
 #' @param window A list with two named entries, "x" and "y", each a length 2
 #'                     numeric vector with the minimum and maximum values
 #'                     taken for the respective coordinate in the sampled
@@ -68,7 +68,7 @@
 #' plotGrid(list(window = list(x = range(x1), y = range(x2)),
 #'               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
 #'          F1 = F1, F2 = F2, margins = TRUE)
-#' covModel <- RMexp(var = 1, scale = 2) + RMnugget(var = 1)
+#' covModel <- RMexp(var = .2, scale = 1) + RMnugget(var = .2)
 #' data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
 #' y <- as.numeric(unlist(data@data))
 #' test1 <- bdef(x, y)
@@ -154,12 +154,31 @@ bdef <- function(x, y, tim = NULL,
   B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE)
   B2 <- bs(range(x[, 2]), df = df2, intercept = TRUE)
   basis <- list(B1 = B1, B2 = B2)
+
   W <- matrix(0, n, df1*df2) # TODO debug unequal df
-  for(i in 1:n) W[i,] <- kronecker(predict(basis$B1, x[, 1])[i, ],
-                                   predict(basis$B2, x[, 2])[i, ])
+  # Has to be turned around
+  for(i in 1:n) W[i,] <- kronecker(predict(basis$B2, x[, 2])[i, ],
+                                   predict(basis$B1, x[, 1])[i, ])
 
   theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
                as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 2]))))
+
+  # ---------- Debugging
+  if(FALSE){
+    f1 <- f2 <- numeric(n)
+    bb1 <- predict(basis$B1, x[, 1])
+    bb2 <- predict(basis$B2, x[, 2])
+    for(i in 1:n){
+      f1[i] <- (bb1[i, ])%*%matrix(theta00[1:(df1*df2)], nrow = df1, ncol = df2)%*%bb2[i,]
+      f2[i] <- (bb1[i, ])%*%matrix(theta00[df1*df2 + 1:(df1*df2)], nrow = df1, ncol = df2)%*%bb2[i,]
+    }
+    dev.off()
+    plot(f1, x[,1])
+    plot(W%*%theta00[1:(df1*df2)], x[,1])
+    plot(f2, x[,2])
+    plot(W%*%theta00[df1*df2 + 1:(df1*df2)], x[,2])
+  }
+  # ----------
 
   if(m == 0){
     model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = y, ...))
@@ -173,26 +192,17 @@ bdef <- function(x, y, tim = NULL,
                      fn = likelihoodTarget, # gr = NULL
                      hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                      control.outer = list(trace = FALSE,
-                                          kkt2.check = FALSE),
+                                          kkt2.check = FALSE,
+                                          method = "nlminb"),
                      DF1 = df1, DF2 = df2, B = basis,
                      M = model0, X = x, Y = y)$par
-    # AVALIAR FUNCAO COM THETA1, THETA2 ao inves de funcao generica
-    # TEstar valores inicials == valores verdadeiros
-    # Graficar a penalidade
-    # fakeModel <- list(basis = basis,
-    #                   window = window,
-    #                   x = x, def.x = x,
-    #                   theta1 = theta0[1:(df1*df2)],
-    #                   theta2 = theta0[df1*df2 + 1:(df1*df2)],
-    #                   df1 = df1,
-    #                   df2 = df2)
-    # plotGrid(fakeModel)
   } else {
     theta0 <- auglag(theta00,
                      fn = likelihoodTarget, # gr = NULL
                      hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                      control.outer = list(trace = FALSE,
-                                          kkt2.check = FALSE),
+                                          kkt2.check = FALSE,
+                                          method = "nlminb"),
                      DF1 = df1, DF2 = df2, B = basis,
                      M = model0, X = x, Y = matrix(y, ncol = m))$par
   }
@@ -214,7 +224,8 @@ bdef <- function(x, y, tim = NULL,
                         fn = likelihoodTarget, # gr = NULL
                         hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                         control.outer = list(trace = FALSE,
-                                             kkt2.check = FALSE),
+                                             kkt2.check = FALSE,
+                                             method = "nlminb"),
                         DF1 = df1, DF2 = df2, B = basis,
                         M = model0, X = x, Y = y)$par
   } else {
@@ -224,7 +235,8 @@ bdef <- function(x, y, tim = NULL,
                         fn = likelihoodTarget, # gr = NULL
                         hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                         control.outer = list(trace = FALSE,
-                                             kkt2.check = FALSE),
+                                             kkt2.check = FALSE,
+                                             method = "nlminb"),
                         DF1 = df1, DF2 = df2, B = basis,
                         M = model0, X = x, Y = matrix(y, ncol = m))$par
   }
@@ -249,7 +261,8 @@ bdef <- function(x, y, tim = NULL,
                           fn = likelihoodTarget, # gr = NULL
                           hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                           control.outer = list(trace = FALSE,
-                                               kkt2.check = FALSE),
+                                               kkt2.check = FALSE,
+                                               method = "nlminb"),
                           DF1 = df1, DF2 = df2, B = basis,
                           M = model0, X = x, Y = y)$par
     } else {
@@ -260,11 +273,12 @@ bdef <- function(x, y, tim = NULL,
                           fn = likelihoodTarget, # gr = NULL
                           hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                           control.outer = list(trace = FALSE,
-                                               kkt2.check = FALSE),
+                                               kkt2.check = FALSE,
+                                               method = "nlminb"),
                           DF1 = df1, DF2 = df2, B = basis,
                           M = model0, X = x, Y = matrix(y, ncol = m))$par
     }
-    condition <- all(max(abs(theta0 - theta.new)/abs(theta0), 0.0009) < 0.001)
+    condition <- all(max(abs(theta0 - theta.new)/abs(theta0), 0.009) < 0.01)
     it <- it + 1
     # Traces the deformation map estimation
     if(traceback) {

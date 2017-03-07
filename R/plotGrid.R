@@ -42,7 +42,7 @@
 #' tempb1 <- bs(x[, 1], K, intercept = TRUE)
 #' tempb2 <- bs(x[, 2], K, intercept = TRUE)
 #' tempW <- matrix(0, n, K^2)
-#' for(i in 1:n) tempW[i,] <- kronecker(tempb1[i,], tempb2[i,])
+#' for(i in 1:n) tempW[i,] <- kronecker(tempb2[i,], tempb1[i,])
 #' theta1 <- solve(crossprod(tempW), crossprod(tempW, x[,1] + .2*x[,2]))
 #' theta2 <- solve(crossprod(tempW), crossprod(tempW, x[,2] - .2*sqrt(x[,1]*x[,2])))
 #' def.x <- cbind(tempW%*%theta1, tempW%*%theta2)
@@ -91,7 +91,7 @@ plotGrid <- function(model, nx = 20, ny = 20,
   B1 <- predict(B$B1, xygrid[,1])
   B2 <- predict(B$B2, xygrid[,2])
   W <- matrix(0, nrow(xygrid), prod(sapply(B, dim)[2,]))
-  for(i in 1:nrow(xygrid)) W[i,] <- kronecker(B1[i,], B2[i,])
+  for(i in 1:nrow(xygrid)) W[i,] <- kronecker(B2[i,], B1[i,])
   if(is.null(F1)) {
     f1 <- as.numeric(W%*%theta1)
   } else {

@@ -40,4 +40,3 @@ testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m, maxit = 10) # lambda e
 plotGrid(testT, margins = TRUE)
 plotGDdist(testT)
 }
-

@@ -61,7 +61,7 @@ K <- 4
 tempb1 <- bs(x[, 1], K, intercept = TRUE)
 tempb2 <- bs(x[, 2], K, intercept = TRUE)
 tempW <- matrix(0, n, K^2)
-for(i in 1:n) tempW[i,] <- kronecker(tempb1[i,], tempb2[i,])
+for(i in 1:n) tempW[i,] <- kronecker(tempb2[i,], tempb1[i,])
 theta1 <- solve(crossprod(tempW), crossprod(tempW, x[,1] + .2*x[,2]))
 theta2 <- solve(crossprod(tempW), crossprod(tempW, x[,2] - .2*sqrt(x[,1]*x[,2])))
 def.x <- cbind(tempW\%*\%theta1, tempW\%*\%theta2)
@@ -81,18 +81,17 @@ fakeModel <- list(basis = list(B1 = bs(range(x[, 1]), K, intercept = TRUE),
  # pdf("sim3.pdf"); plotGrid(fakeModel, persp = TRUE); dev.off()
 
 }
-\author{
-Guilherme Ludwig and Ronaldo Dias
-}
 \references{
 To add.
 }
 \seealso{
 \code{\link{bdef}}
 }
+\author{
+Guilherme Ludwig and Ronaldo Dias
+}
 \keyword{Analysis}
 \keyword{Data}
 \keyword{Functional}
 \keyword{Spatial}
 \keyword{Statistics}
-

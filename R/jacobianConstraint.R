@@ -25,11 +25,18 @@ jacobianConstraint <- function(theta,
   B2 <- predict(B$B2, X[ , 2, drop = FALSE])
 
   for(i in 1:n){
-    t1b1 <- theta1%*%dB1[i,]
-    t1b2 <- theta1%*%dB2[i,]
-    t2b1 <- theta2%*%dB1[i,]
-    t2b2 <- theta2%*%dB2[i,]
-    PEN[i] <- as.numeric(B1[i,]%*%(tcrossprod(t2b2,t1b1) - tcrossprod(t1b2,t2b1))%*%B2[i,])
+    # t1b1 <- theta1%*%dB1[i,]
+    # t1b2 <- theta1%*%dB2[i,]
+    # t2b1 <- theta2%*%dB1[i,]
+    # t2b2 <- theta2%*%dB2[i,]
+    df1d1 <- dB1[i,]%*%theta1%*%B2[i,]
+    df2d2 <- B1[i,]%*%theta2%*%dB2[i,]
+    df1d2 <- B1[i,]%*%theta1%*%dB2[i,]
+    df2d1 <- dB1[i,]%*%theta2%*%B2[i,]
+    PEN[i] <- as.numeric(df1d1*df2d2 - df1d2*df2d1) # Same as
+    # Profile later
+    # PEN[i] <- as.numeric(B1[i,]%*%(theta2%*%outer(dB2[i,],dB1[i,])%*%theta1 - theta1%*%outer(dB2[i,],dB1[i,])%*%theta2)%*%B2[i,])
+    # PEN[i] <- as.numeric(B1[i,]%*%(tcrossprod(t2b2,t1b1) - tcrossprod(t1b2,t2b1))%*%B2[i,])
   }
 
   return(PEN)
