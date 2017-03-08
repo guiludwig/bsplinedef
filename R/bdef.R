@@ -154,11 +154,26 @@ bdef <- function(x, y, tim = NULL,
   B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE)
   B2 <- bs(range(x[, 2]), df = df2, intercept = TRUE)
   basis <- list(B1 = B1, B2 = B2)
+  dB1 <- splineDesign(knots = c(rep(attr(B1, "Boundary.knots")[1],
+                                    attr(B1, "degree")+1),
+                                attr(B1, "knots"),
+                                rep(attr(B1, "Boundary.knots")[2],
+                                    attr(B1, "degree")+1)),
+                      x = x[, 1, drop = FALSE], outer.ok = TRUE,
+                      derivs = 1)
+  dB2 <- splineDesign(knots = c(rep(attr(B2, "Boundary.knots")[1],
+                                    attr(B2, "degree")+1),
+                                attr(B2, "knots"),
+                                rep(attr(B2, "Boundary.knots")[2],
+                                    attr(B2, "degree")+1)),
+                      x = x[, 2, drop = FALSE], outer.ok = TRUE,
+                      derivs = 1)
+  B1 <- predict(B1, x[ , 1, drop = FALSE])
+  B2 <- predict(B2, x[ , 2, drop = FALSE])
 
   W <- matrix(0, n, df1*df2) # TODO debug unequal df
   # Has to be turned around
-  for(i in 1:n) W[i,] <- kronecker(predict(basis$B2, x[, 2])[i, ],
-                                   predict(basis$B1, x[, 1])[i, ])
+  for(i in 1:n) W[i,] <- kronecker(B2[i, ], B1[i, ])
 
   theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
                as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 2]))))
@@ -192,19 +207,23 @@ bdef <- function(x, y, tim = NULL,
                      fn = likelihoodTarget, # gr = NULL
                      hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                      control.outer = list(trace = FALSE,
-                                          kkt2.check = FALSE,
-                                          method = "nlminb"),
-                     DF1 = df1, DF2 = df2, B = basis,
-                     M = model0, X = x, Y = y)$par
+                                          kkt2.check = FALSE),
+                     DF1 = df1, DF2 = df2,
+                     b1 = B1, b2 = B2,
+                     db1 = dB1, db2 = dB2,
+                     M = model0, X = x, w = W,
+                     Y = y)$par
   } else {
     theta0 <- auglag(theta00,
                      fn = likelihoodTarget, # gr = NULL
                      hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                      control.outer = list(trace = FALSE,
-                                          kkt2.check = FALSE,
-                                          method = "nlminb"),
-                     DF1 = df1, DF2 = df2, B = basis,
-                     M = model0, X = x, Y = matrix(y, ncol = m))$par
+                                          kkt2.check = FALSE),
+                     DF1 = df1, DF2 = df2,
+                     b1 = B1, b2 = B2,
+                     db1 = dB1, db2 = dB2,
+                     M = model0, X = x, w = W,
+                     Y = matrix(y, ncol = m))$par
   }
 
   # Traces the deformation map estimation
@@ -224,10 +243,12 @@ bdef <- function(x, y, tim = NULL,
                         fn = likelihoodTarget, # gr = NULL
                         hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                         control.outer = list(trace = FALSE,
-                                             kkt2.check = FALSE,
-                                             method = "nlminb"),
-                        DF1 = df1, DF2 = df2, B = basis,
-                        M = model0, X = x, Y = y)$par
+                                             kkt2.check = FALSE),
+                        DF1 = df1, DF2 = df2,
+                        b1 = B1, b2 = B2,
+                        db1 = dB1, db2 = dB2,
+                        M = model0, X = x, w = W,
+                        Y = y)$par
   } else {
     # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
     model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
@@ -235,10 +256,12 @@ bdef <- function(x, y, tim = NULL,
                         fn = likelihoodTarget, # gr = NULL
                         hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                         control.outer = list(trace = FALSE,
-                                             kkt2.check = FALSE,
-                                             method = "nlminb"),
-                        DF1 = df1, DF2 = df2, B = basis,
-                        M = model0, X = x, Y = matrix(y, ncol = m))$par
+                                             kkt2.check = FALSE),
+                        DF1 = df1, DF2 = df2,
+                        b1 = B1, b2 = B2,
+                        db1 = dB1, db2 = dB2,
+                        M = model0, X = x, w = W,
+                        Y = matrix(y, ncol = m))$par
   }
 
   # Traces the deformation map estimation
@@ -261,10 +284,12 @@ bdef <- function(x, y, tim = NULL,
                           fn = likelihoodTarget, # gr = NULL
                           hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                           control.outer = list(trace = FALSE,
-                                               kkt2.check = FALSE,
-                                               method = "nlminb"),
-                          DF1 = df1, DF2 = df2, B = basis,
-                          M = model0, X = x, Y = y)$par
+                                               kkt2.check = FALSE),
+                          DF1 = df1, DF2 = df2,
+                          b1 = B1, b2 = B2,
+                          db1 = dB1, db2 = dB2,
+                          M = model0, X = x, w = W,
+                          Y = y)$par
     } else {
       # BUG HERE
       # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
@@ -273,10 +298,12 @@ bdef <- function(x, y, tim = NULL,
                           fn = likelihoodTarget, # gr = NULL
                           hin = jacobianConstraint, hin.jac = dJacobianConstraint,
                           control.outer = list(trace = FALSE,
-                                               kkt2.check = FALSE,
-                                               method = "nlminb"),
-                          DF1 = df1, DF2 = df2, B = basis,
-                          M = model0, X = x, Y = matrix(y, ncol = m))$par
+                                               kkt2.check = FALSE),
+                          DF1 = df1, DF2 = df2,
+                          b1 = B1, b2 = B2,
+                          db1 = dB1, db2 = dB2,
+                          M = model0, X = x, w = W,
+                          Y = matrix(y, ncol = m))$par
     }
     condition <- all(max(abs(theta0 - theta.new)/abs(theta0), 0.009) < 0.01)
     it <- it + 1
