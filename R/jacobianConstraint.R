@@ -34,9 +34,20 @@ jacobianConstraint <- function(theta,
     df2d2 <- b1[i,]%*%theta2%*%db2[i,]
     df1d2 <- b1[i,]%*%theta1%*%db2[i,]
     df2d1 <- db1[i,]%*%theta2%*%b2[i,]
-    PEN[i] <- as.numeric(df1d1*df2d2 - df1d2*df2d1) # Same as
+    # Test: both eigenvalues have to be positive
+    TT <- as.numeric(df1d1 + df2d2)
+    DD <- as.numeric(df1d1*df2d2 - df1d2*df2d1)
+    L1 <- TT/2 + sqrt(as.complex((TT/2)^2-DD))
+    L2 <- TT/2 - sqrt(as.complex((TT/2)^2+DD))
+    #!# PEN[i] <- as.numeric(df1d1*df2d2 - df1d2*df2d1) # Same as
+    if(Im(L1) != 0 | Im(L2) != 0) {
+      PEN[i] <- -abs(Re(L1)*Re(L2)) - abs(Im(L1)*Im(L2)) # DD
+    } else {
+      PEN[i] <- Re(L1)*Re(L2) # DD
+    }
     # Profile later
-    # PEN[i] <- as.numeric(B1[i,]%*%(theta2%*%outer(dB2[i,],dB1[i,])%*%theta1 - theta1%*%outer(dB2[i,],dB1[i,])%*%theta2)%*%B2[i,])
+    # PEN[i] <- as.numeric(B1[i,]%*%(theta2%*%outer(dB2[i,],dB1[i,])%*%theta1 -
+    #                                theta1%*%outer(dB2[i,],dB1[i,])%*%theta2)%*%B2[i,])
     # PEN[i] <- as.numeric(B1[i,]%*%(tcrossprod(t2b2,t1b1) - tcrossprod(t1b2,t2b1))%*%B2[i,])
   }
 

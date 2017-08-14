@@ -30,8 +30,10 @@ dJacobianConstraint <- function(theta,
   for(ell in 1:n){
     for(i in 1:DF1){
       for(j in 1:DF2){
-        dPEN[ell, i + (j-1)*DF1] <- b1[ell,i]*b2[ell,j]*(db1[ell,i]*crossprod(db2[ell,], theta2[i,]) - db2[ell,j]*crossprod(db1[ell,], theta2[,j]))
-        dPEN[ell, DF1*DF2 + i + (j-1)*DF1] <- -1*b1[ell,i]*b2[ell,j]*(db1[ell,i]*crossprod(db2[ell,], theta1[i,]) - db2[ell,j]*crossprod(db1[ell,], theta1[,j]))
+        dPEN[ell, i + (j-1)*DF1] <- b1[ell,i]*b2[ell,j]*(db1[ell,i]*crossprod(db2[ell,], theta2[i,]) -
+                                                           db2[ell,j]*crossprod(db1[ell,], theta2[,j]))
+        dPEN[ell, DF1*DF2 + i + (j-1)*DF1] <- -1*b1[ell,i]*b2[ell,j]*(db1[ell,i]*crossprod(db2[ell,], theta1[i,]) -
+                                                                        db2[ell,j]*crossprod(db1[ell,], theta1[,j]))
       }
     }
   }

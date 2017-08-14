@@ -4,7 +4,7 @@
 \alias{plotGDdist}
 \title{Scatterplot of sample spatial covariance entries and pairwise distances in G- and D-domain}
 \usage{
-plotGDdist(model, plot = TRUE, lines = TRUE)
+plotGDdist(model, plot = TRUE, ggplot = FALSE, lines = TRUE)
 }
 \description{
 This function produces a plot of the upper diagonal sample covariance entries and the

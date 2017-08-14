@@ -12,13 +12,17 @@
 #' @param colorD Color of deformed data points and grid. Defaults to Red.
 #' @param plot Whether a plot should be produced or not. Defaults to TRUE.
 #' @param margins Whether a layout should be produced, with f1, f2 estimates
-#'                     shown along the corresponding axes. Defaults to FALSE.
+#'                     shown along the corresponding axes. Defaults to TRUE.
 #' @param F1 Allows the user to supply a function that generates the deformed
 #'                     coordinate y1. Defaults to NULL, in which case the
 #'                     tensor product of B-splines is used instead.
 #' @param F2 Allows the user to supply a function that generates the deformed
 #'                     coordinate y2. Defaults to NULL, in which case the
 #'                     tensor product of B-splines is used instead.
+#' @param chull Whether the deformation is displayed inside of the convex hull
+#'                     of the sampled sites, or a square window containing the sampled
+#'                     sites. Defaults to FALSE, which corresponds to the square
+#'                     window.
 #' @param ... Extra parameters to be passed to perspective plot, in particular the
 #'                     azymutal direction and colatitude. See \code{\link{persp}} for
 #'                     a description.
@@ -35,9 +39,6 @@
 #' x2 <- (0:m)/m
 #' x <- as.matrix(expand.grid(x1,x2))
 #' n <- nrow(x)
-#' \dontrun{
-#'    plot(x, xlim = c(0,1), ylim = c(0,1))
-#' }
 #' K <- 4
 #' tempb1 <- bs(x[, 1], K, intercept = TRUE)
 #' tempb2 <- bs(x[, 2], K, intercept = TRUE)
@@ -54,12 +55,9 @@
 #'                   theta2 = theta2,
 #'                   df1 = K,
 #'                   df2 = K)
+#'  plotGrid(fakeModel, margins = FALSE)
 #'  plotGrid(fakeModel)
-#'  plotGrid(fakeModel, margins = TRUE)
 #'  plotGrid(fakeModel, persp = TRUE, theta = 15)
-#'  # pdf("sim1.pdf"); plotGrid(fakeModel); dev.off()
-#'  # pdf("sim2.pdf"); plotGrid(fakeModel, margins = TRUE); dev.off()
-#'  # pdf("sim3.pdf"); plotGrid(fakeModel, persp = TRUE); dev.off()
 #'
 #' @author Guilherme Ludwig and Ronaldo Dias
 #'
@@ -72,8 +70,9 @@
 #' @keywords Functional Data Analysis
 plotGrid <- function(model, nx = 20, ny = 20,
                      colorO = "Black", colorD = "Red",
-                     plot = TRUE, margins = FALSE,
-                     persp = FALSE, F1 = NULL, F2 = NULL, ...) {
+                     plot = TRUE, margins = TRUE,
+                     persp = FALSE, F1 = NULL, F2 = NULL,
+                     chull = FALSE, ...) {
   theta1 <- model$theta1
   theta2 <- model$theta2
   def.x <- model$def.x
@@ -85,6 +84,9 @@ plotGrid <- function(model, nx = 20, ny = 20,
     B <- model$basis
   }
   xyg <- model$x
+  chx <- chull(xyg) # Convex Hull, clockwise locations of points
+  centerHull <- mean(xyg[chx,]) # Average = baricenter of hull?
+  chx <- c(chx, chx[1]) # Loops around the hull, if needed
   xgrid <- seq(rx[1], rx[2], length = nx)
   ygrid <- seq(ry[1], ry[2], length = ny)
   xygrid <- as.matrix(expand.grid(xgrid, ygrid))
@@ -112,13 +114,38 @@ plotGrid <- function(model, nx = 20, ny = 20,
     plot(x, xlim = xl, ylim = yl, col = colorO,
          ylab = expression(y[2]), xlab = expression(y[1]))
     points(def.x, xlim = xl, ylim = yl, col = colorD)
-    for (i in 1:ny) {
-      lines(xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorO)
-      lines(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorD)
-    }
-    for (j in 1:nx) {
-      lines(xygrid[seq((1+(j-1)),nx*ny,nx),], col = colorO)
-      lines(fgrid[seq((1+(j-1)),nx*ny,nx),], col = colorD)
+    if(chull){
+      for (i in 1:ny) {
+        xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),]
+        tempN <- nrow(temp)
+        condition <- rep(TRUE, tempN)
+        for(j in 1:tempN){
+          if(condition[j]){
+            lines(xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorO)
+            lines(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorD)
+          }
+        }
+      }
+      for (j in 1:nx) {
+        temp <- xygrid[seq((1+(j-1)),nx*ny,nx),]
+        tempN <- nrow(temp)
+        condition <- rep(TRUE, tempN) # is
+        for(i in 1:tempN){
+          if(condition[i]){
+            lines(xygrid[seq((1+(j-1)),nx*ny,nx),], col = colorO)
+            lines(fgrid[seq((1+(j-1)),nx*ny,nx),], col = colorD)
+          }
+        }
+      }
+    } else {
+      for (i in 1:ny) {
+        lines(xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorO)
+        lines(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorD)
+      }
+      for (j in 1:nx) {
+        lines(xygrid[seq((1+(j-1)),nx*ny,nx),], col = colorO)
+        lines(fgrid[seq((1+(j-1)),nx*ny,nx),], col = colorD)
+      }
     }
     if(margins){
       image(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[1:nx,]),

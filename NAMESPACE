@@ -3,3 +3,4 @@
 export(bdef)
 export(plotGDdist)
 export(plotGrid)
+export(plotTraceback)

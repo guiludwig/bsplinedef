@@ -32,4 +32,3 @@ system.time({testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m,
 plotGrid(testT, margins = TRUE)
 plotTraceback(testT, margins = TRUE)
 }
-

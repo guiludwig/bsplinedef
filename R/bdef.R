@@ -7,11 +7,14 @@
 #' @param cov.model A model for the spatial covariance function. See
 #'                     \code{\link{RMmodel}} from the RandomFields package
 #'                     for details. Defaults to Exponential model with
-#'                     unknown variance and scale, plus a nugget effect. Right
+#'                     unknown variance and scale, without a nugget effect. Right
 #'                     now the model doesn't allow space-time covariance models.
+#'                     TODO: default RMexp(var = NA, scale = NA) + RMnugget(var = NA)
 #' @param x A n times 2 matrix of coordinates for the sampled data points. The
 #'                     rows must be unique, corresponding to distinct sample
-#'                     locations.
+#'                     locations. Alternatively, a n times 3 matrix with the third
+#'                     column corresponding to time. The times must be in a regular
+#'                     grid and exist in all spatial locations (TODO generalize).
 #' @param y A vector of length n*m with the values taken by the response
 #'                     at the corresponding spatial locations in x, for
 #'                     each time point t_1, ..., t_m.
@@ -40,6 +43,8 @@
 #'                     \code{\link{plotGDdist}} function, but can be set
 #'                     to FALSE if the user has no interest in GDdist.
 #'                     Defaults to TRUE.
+#' @param debugg Debug flag for testing convergence of likelihood
+#'                     optimization with gradients.
 #' @param ... Additional arguments for RFfit.
 #'
 #' @export
@@ -55,65 +60,40 @@
 #' @examples
 #' # Example using artificially generated data
 #' set.seed(1)
-#' n <- 40
-#' x1 <- runif(n)
-#' x2 <- runif(n)
-#' x <- cbind(x1,x2)
-#' F1 <- function(x1,x2) {
-#'   x1
+#' m <- 10
+#' x1 <- (0:m)/m
+#' x2 <- (0:m)/m
+#' x <- as.matrix(expand.grid(x1,x2))
+#' n <- nrow(x)
+#' F1 <- function(x1,x2, a = 2.5, b = 1.0) {
+#' x <- x1 - 0.5; y <- x2 - 0.5
+#' angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
+#' return(cos(angle)*x + sin(angle)*y + 0.5)
 #' }
-#' F2 <- function(x1,x2) {
-#'   sqrt(x1*x2)
+#' F2 <- function(x1,x2, a = 2.5, b = 1.0) {
+#' x <- x1 - 0.5; y <- x2 - 0.5
+#' angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
+#' return(-sin(angle)*x + cos(angle)*y + 0.5)
 #' }
-#' plotGrid(list(window = list(x = range(x1), y = range(x2)),
-#'               x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
-#'          F1 = F1, F2 = F2, margins = TRUE)
-#' covModel <- RMexp(var = .2, scale = 1) + RMnugget(var = .2)
-#' data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
-#' y <- as.numeric(unlist(data@data))
-#' test1 <- bdef(x, y)
-#' plotGrid(test1, margins = TRUE)
-#' # \dontrun{
-#' # test1 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA))
-#' # plotGrid(test2, margins = TRUE)
-#' # }
-#' # Time version
 #' TIME <- 20
-#' covModel2 <- RMexp(proj = "space", var = 1, scale = .25) *
-#'   RMnugget(proj = "time", var = 1)
-#' data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
-#' y <- as.numeric(unlist(data2@data))
-#' # \dontrun{
-#' # matplot(1:TIME, t(matrix(y, ncol = TIME)), type = "b", lty = 1, pch = 1)
-#' # }
-#' covModel2m <- RMexp(var = NA, scale = NA) # Only space?
-#' system.time({testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m,
-#'               maxit = 10, traceback = TRUE)})
-#' plotGrid(testT, margins = TRUE)
-#' plotGrid(list(basis = testT$basis,
-#'               window = testT$window,
-#'               x = testT$x,
-#'               def.x = testT$x, # Fix here
-#'               theta1 = testT$trace[[2]]$theta1,
-#'               theta2 = testT$trace[[2]]$theta2,
-#'               df1 = 6,
-#'               df2 = 6), margins = TRUE)
-#'               plotGrid(list(basis = testT$basis,
-#'               window = testT$window,
-#'               x = testT$x,
-#'               def.x = testT$x, # Fix here
-#'               theta1 = testT$trace[[4]]$theta1,
-#'               theta2 = testT$trace[[4]]$theta2,
-#'               df1 = 6,
-#'               df2 = 6), margins = TRUE)
-#'               plotGrid(list(basis = testT$basis,
-#'               window = testT$window,
-#'               x = testT$x,
-#'               def.x = testT$x, # Fix here
-#'               theta1 = testT$trace[[6]]$theta1,
-#'               theta2 = testT$trace[[6]]$theta2,
-#'               df1 = 6,
-#'               df2 = 6), margins = TRUE)
+#' covModel <- RMexp(proj = "space", var = 1, scale = .25) *
+#' RMnugget(proj = "time", var = 1)
+#' data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), T = 1:TIME)
+#' y <- as.numeric(unlist(data@data))
+#' covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA) # Only space
+#' # No deformation reference, entries are independent in time
+#' test.nondef <- RFfit(covModelM, x = x[,1], y = x[,2], 
+#'                      data = matrix(y, ncol = TIME))
+#' # Calculates deformation, profle likelihood up to maxit times
+#' test.def <- bdef(x, y, tim = 1:TIME, cov.model = covModelM, maxit = 10)
+#' # Estimated deformation
+#' plotGrid(test.def, margins = TRUE)
+#' # Comparison of Variograms
+#' plot(test.nondef, ylim = c(0,1), xlim = c(0,0.7))
+#' plot(test.def$model, ylim = c(0,1), xlim = c(0,0.7))
+#' # Ground truth:
+#' plot(RMexp(var = 1, scale = .25), fct.type = "Variogram", 
+#'      xlim = c(0,0.7), ylim = c(0,1))
 #'
 #' @author Guilherme Ludwig and Ronaldo Dias
 #'
@@ -128,19 +108,19 @@ bdef <- function(x, y, tim = NULL,
                  cov.model = RMexp(var = NA, scale = NA) + RMnugget(var = NA),
                  df1 = 6, df2 = 6,
                  window = list(x = range(x[,1]), y = range(x[,2])),
-                 maxit = 2, traceback = FALSE, fullDes = TRUE, ...) {
+                 maxit = 2, traceback = FALSE, fullDes = TRUE, debugg = TRUE, ...) {
 
   RFoptions(printlevel=0, warn_normal_mode=FALSE)
 
   if(maxit < 0){
     maxit <- 1
   }
-  # if(!is.null(tim) && length(tim) <= 3){
-  #   # CHECK AMBIGUITY
-  # }
+  if(!is.matrix(x)){
+    message("x coerced to be a matrix, please check input.")
+    x <- as.matrix(x)
+  }
 
   # Assuming total separability for now!
-  #!# NEED TO SORT X!!
   n <- nrow(x)
   m <- length(tim)
   if(ncol(x)>2){
@@ -171,8 +151,7 @@ bdef <- function(x, y, tim = NULL,
   B1 <- predict(B1, x[ , 1, drop = FALSE])
   B2 <- predict(B2, x[ , 2, drop = FALSE])
 
-  W <- matrix(0, n, df1*df2) # TODO debug unequal df
-  # Has to be turned around
+  W <- matrix(0, n, df1*df2)
   for(i in 1:n) W[i,] <- kronecker(B2[i, ], B1[i, ])
 
   theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
@@ -203,27 +182,43 @@ bdef <- function(x, y, tim = NULL,
   }
 
   if(m==0){
-    theta0 <- auglag(par = theta00,
-                     fn = likelihoodTarget, # gr = NULL
-                     hin = jacobianConstraint, hin.jac = dJacobianConstraint,
-                     control.outer = list(trace = FALSE,
-                                          kkt2.check = FALSE),
-                     DF1 = df1, DF2 = df2,
-                     b1 = B1, b2 = B2,
-                     db1 = dB1, db2 = dB2,
-                     M = model0, X = x, w = W,
-                     Y = y)$par
+    if(debugg){
+      theta0 <- optim(par = theta00,
+                      fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                      DF1 = df1, DF2 = df2,
+                      M = model0, X = x, w = W,
+                      Y = y)$par
+    } else {
+      theta0 <- auglag(par = theta00,
+                       fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                       hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
+                       control.outer = list(trace = FALSE,
+                                            kkt2.check = FALSE),
+                       DF1 = df1, DF2 = df2,
+                       b1 = B1, b2 = B2,
+                       db1 = dB1, db2 = dB2,
+                       M = model0, X = x, w = W,
+                       Y = y)$par
+    }
   } else {
-    theta0 <- auglag(theta00,
-                     fn = likelihoodTarget, # gr = NULL
-                     hin = jacobianConstraint, hin.jac = dJacobianConstraint,
-                     control.outer = list(trace = FALSE,
-                                          kkt2.check = FALSE),
-                     DF1 = df1, DF2 = df2,
-                     b1 = B1, b2 = B2,
-                     db1 = dB1, db2 = dB2,
-                     M = model0, X = x, w = W,
-                     Y = matrix(y, ncol = m))$par
+    if(debugg){
+      theta0 <- optim(theta00,
+                      fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                      DF1 = df1, DF2 = df2,
+                      M = model0, X = x, w = W,
+                      Y = matrix(y, ncol = m))$par
+    } else {
+      theta0 <- auglag(theta00,
+                       fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                       hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
+                       control.outer = list(trace = FALSE,
+                                            kkt2.check = FALSE),
+                       DF1 = df1, DF2 = df2,
+                       b1 = B1, b2 = B2,
+                       db1 = dB1, db2 = dB2,
+                       M = model0, X = x, w = W,
+                       Y = matrix(y, ncol = m))$par
+    }
   }
 
   # Traces the deformation map estimation
@@ -239,29 +234,45 @@ bdef <- function(x, y, tim = NULL,
 
   if(m == 0){
     model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
-    theta.new <- auglag(theta0,
-                        fn = likelihoodTarget, # gr = NULL
-                        hin = jacobianConstraint, hin.jac = dJacobianConstraint,
-                        control.outer = list(trace = FALSE,
-                                             kkt2.check = FALSE),
-                        DF1 = df1, DF2 = df2,
-                        b1 = B1, b2 = B2,
-                        db1 = dB1, db2 = dB2,
-                        M = model0, X = x, w = W,
-                        Y = y)$par
+    if(debugg){
+      theta.new <- optim(theta0,
+                         fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                         DF1 = df1, DF2 = df2,
+                         M = model0, X = x, w = W,
+                         Y = y)$par
+    } else {
+      theta.new <- auglag(theta0,
+                          fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                          hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
+                          control.outer = list(trace = FALSE,
+                                               kkt2.check = FALSE),
+                          DF1 = df1, DF2 = df2,
+                          b1 = B1, b2 = B2,
+                          db1 = dB1, db2 = dB2,
+                          M = model0, X = x, w = W,
+                          Y = y)$par
+    }
   } else {
     # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
     model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
-    theta.new <- auglag(theta0,
-                        fn = likelihoodTarget, # gr = NULL
-                        hin = jacobianConstraint, hin.jac = dJacobianConstraint,
-                        control.outer = list(trace = FALSE,
-                                             kkt2.check = FALSE),
-                        DF1 = df1, DF2 = df2,
-                        b1 = B1, b2 = B2,
-                        db1 = dB1, db2 = dB2,
-                        M = model0, X = x, w = W,
-                        Y = matrix(y, ncol = m))$par
+    if(debugg){
+      theta.new <- optim(theta0,
+                         fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                         DF1 = df1, DF2 = df2,
+                         M = model0, X = x, w = W,
+                         Y = matrix(y, ncol = m))$par
+    } else {
+      theta.new <- auglag(theta0,
+                          fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                          hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
+                          control.outer = list(trace = FALSE,
+                                               kkt2.check = FALSE),
+                          DF1 = df1, DF2 = df2,
+                          b1 = B1, b2 = B2,
+                          db1 = dB1, db2 = dB2,
+                          M = model0, X = x, w = W,
+                          Y = matrix(y, ncol = m))$par
+    }
   }
 
   # Traces the deformation map estimation
@@ -280,32 +291,49 @@ bdef <- function(x, y, tim = NULL,
     f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
     if(m == 0){
       model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
-      theta.new <- auglag(theta0,
-                          fn = likelihoodTarget, # gr = NULL
-                          hin = jacobianConstraint, hin.jac = dJacobianConstraint,
-                          control.outer = list(trace = FALSE,
-                                               kkt2.check = FALSE),
-                          DF1 = df1, DF2 = df2,
-                          b1 = B1, b2 = B2,
-                          db1 = dB1, db2 = dB2,
-                          M = model0, X = x, w = W,
-                          Y = y)$par
+      if(debugg){
+        theta.new <- optim(theta0,
+                           fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                           DF1 = df1, DF2 = df2,
+                           M = model0, X = x, w = W,
+                           Y = y)$par
+      } else {
+        theta.new <- auglag(theta0,
+                            fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                            hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
+                            control.outer = list(trace = FALSE,
+                                                 kkt2.check = FALSE),
+                            DF1 = df1, DF2 = df2,
+                            b1 = B1, b2 = B2,
+                            db1 = dB1, db2 = dB2,
+                            M = model0, X = x, w = W,
+                            Y = y)$par
+      }
     } else {
-      # BUG HERE
       # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
       model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
-      theta.new <- auglag(theta0,
-                          fn = likelihoodTarget, # gr = NULL
-                          hin = jacobianConstraint, hin.jac = dJacobianConstraint,
-                          control.outer = list(trace = FALSE,
-                                               kkt2.check = FALSE),
-                          DF1 = df1, DF2 = df2,
-                          b1 = B1, b2 = B2,
-                          db1 = dB1, db2 = dB2,
-                          M = model0, X = x, w = W,
-                          Y = matrix(y, ncol = m))$par
+      if(debugg){
+        theta.new <- optim(theta0,
+                           fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                           DF1 = df1, DF2 = df2,
+                           M = model0, X = x, w = W,
+                           Y = matrix(y, ncol = m))$par
+      } else {
+        theta.new <- auglag(theta0,
+                            fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                            hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
+                            control.outer = list(trace = FALSE,
+                                                 kkt2.check = FALSE),
+                            DF1 = df1, DF2 = df2,
+                            b1 = B1, b2 = B2,
+                            db1 = dB1, db2 = dB2,
+                            M = model0, X = x, w = W,
+                            Y = matrix(y, ncol = m))$par
+      }
     }
-    condition <- all(max(abs(theta0 - theta.new)/abs(theta0), 0.009) < 0.01)
+    tempCon <- abs(theta0 - theta.new)/abs(theta0)
+    tempCon <- ifelse(is.nan(tempCon), TRUE, tempCon < 0.01) # ignores theta0 = 0 entries, keep opt
+    condition <- all(tempCon)
     it <- it + 1
     # Traces the deformation map estimation
     if(traceback) {
@@ -314,6 +342,9 @@ bdef <- function(x, y, tim = NULL,
                                             theta2 = theta.new[1:(df1*df2) + (df1*df2)])
     }
   }
+
+  f1 <- as.numeric(W%*%theta.new[1:(df1*df2)])
+  f2 <- as.numeric(W%*%theta.new[1:(df1*df2) + (df1*df2)])
 
   ret <- list(window = window,
               basis = basis,

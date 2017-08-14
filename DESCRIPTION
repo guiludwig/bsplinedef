@@ -5,7 +5,8 @@ Depends:
     splines,
     fields,
     RandomFields,
-    alabama
+    alabama,
+    ggplot2
 Type: Package
 Title: Spatial Deformation via Tensor Product of B-splines
 Version: 0.1.9
@@ -13,19 +14,20 @@ Author: Guilherme Ludwig [aut, cre],
     Ronaldo Dias [aut],
     Paul Sampson [ctb]
 Maintainer: Guilherme Ludwig <gvludwig@ime.unicamp.br>
-Description: Computes coordinate transformations of the form 
-    (y1, y2) = (f1(x1, x2), f2(x1, x2)) for spatial regression, 
-    where a spatial process Y on (y1, y2) has known stationary 
+Description: Computes coordinate transformations of the form
+    (y1, y2) = (f1(x1, x2), f2(x1, x2)) for spatial regression,
+    where a spatial process Y on (y1, y2) has known stationary
     covariance function. The functions f1 and f2 are obtained
     via the tensor product of B-splines, with a regularization
-    penalty to ensure f1, f2 are injective functions. The case 
-    for Y Gaussian with general covariance function is implemented, 
-    as well as documentation for extensions to different spatial 
+    penalty to ensure f1, f2 are injective functions. The case
+    for Y Gaussian with general covariance function is implemented,
+    as well as documentation for extensions to different spatial
     covariance functions.
 License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
-Suggests: knitr,
+Suggests:
+    knitr,
     rmarkdown
 VignetteBuilder: knitr

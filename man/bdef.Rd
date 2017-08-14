@@ -6,12 +6,15 @@
 \usage{
 bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
   RMnugget(var = NA), df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y
-  = range(x[, 2])), maxit = 2, traceback = FALSE, fullDes = TRUE, ...)
+  = range(x[, 2])), maxit = 2, traceback = FALSE, fullDes = TRUE,
+  debugg = TRUE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The
 rows must be unique, corresponding to distinct sample
-locations.}
+locations. Alternatively, a n times 3 matrix with the third
+column corresponding to time. The times must be in a regular
+grid and exist in all spatial locations (TODO generalize).}
 
 \item{y}{A vector of length n*m with the values taken by the response
 at the corresponding spatial locations in x, for
@@ -25,8 +28,9 @@ same corresponding locations as rows in x.}
 \item{cov.model}{A model for the spatial covariance function. See
 \code{\link{RMmodel}} from the RandomFields package
 for details. Defaults to Exponential model with
-unknown variance and scale, plus a nugget effect. Right
-now the model doesn't allow space-time covariance models.}
+unknown variance and scale, without a nugget effect. Right
+now the model doesn't allow space-time covariance models.
+TODO: default RMexp(var = NA, scale = NA) + RMnugget(var = NA)}
 
 \item{df1}{Degrees of freedom for the tensor product of splines along
 the x[,1] coordinate. Defaults to 4.}
@@ -55,6 +59,9 @@ copy of the dataset. Needed for the
 to FALSE if the user has no interest in GDdist.
 Defaults to TRUE.}
 
+\item{debugg}{Debug flag for testing convergence of likelihood
+optimization with gradients.}
+
 \item{...}{Additional arguments for RFfit.}
 }
 \value{
@@ -75,65 +82,40 @@ via the tensor product of B-spline basis functions.
 \examples{
 # Example using artificially generated data
 set.seed(1)
-n <- 40
-x1 <- runif(n)
-x2 <- runif(n)
-x <- cbind(x1,x2)
-F1 <- function(x1,x2) {
-  x1
+m <- 10
+x1 <- (0:m)/m
+x2 <- (0:m)/m
+x <- as.matrix(expand.grid(x1,x2))
+n <- nrow(x)
+F1 <- function(x1,x2, a = 2.5, b = 1.0) {
+x <- x1 - 0.5; y <- x2 - 0.5
+angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
+return(cos(angle)*x + sin(angle)*y + 0.5)
 }
-F2 <- function(x1,x2) {
-  sqrt(x1*x2)
+F2 <- function(x1,x2, a = 2.5, b = 1.0) {
+x <- x1 - 0.5; y <- x2 - 0.5
+angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
+return(-sin(angle)*x + cos(angle)*y + 0.5)
 }
-plotGrid(list(window = list(x = range(x1), y = range(x2)),
-              x = x, def.x = cbind(F1(x1,x2), F2(x1,x2))),
-         F1 = F1, F2 = F2, margins = TRUE)
-covModel <- RMexp(var = .2, scale = 1) + RMnugget(var = .2)
-data <- RFsimulate(covModel, x = F1(x1,x2), y = F2(x1,x2))
-y <- as.numeric(unlist(data@data))
-test1 <- bdef(x, y)
-plotGrid(test1, margins = TRUE)
-# \dontrun{
-# test1 <- bdef(x, y, cov.model = RMmatern(nu = 2.5, var = NA, scale = NA))
-# plotGrid(test2, margins = TRUE)
-# }
-# Time version
 TIME <- 20
-covModel2 <- RMexp(proj = "space", var = 1, scale = .25) *
-  RMnugget(proj = "time", var = 1)
-data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
-y <- as.numeric(unlist(data2@data))
-# \dontrun{
-# matplot(1:TIME, t(matrix(y, ncol = TIME)), type = "b", lty = 1, pch = 1)
-# }
-covModel2m <- RMexp(var = NA, scale = NA) # Only space?
-system.time({testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m,
-              maxit = 10, traceback = TRUE)})
-plotGrid(testT, margins = TRUE)
-plotGrid(list(basis = testT$basis,
-              window = testT$window,
-              x = testT$x,
-              def.x = testT$x, # Fix here
-              theta1 = testT$trace[[2]]$theta1,
-              theta2 = testT$trace[[2]]$theta2,
-              df1 = 6,
-              df2 = 6), margins = TRUE)
-              plotGrid(list(basis = testT$basis,
-              window = testT$window,
-              x = testT$x,
-              def.x = testT$x, # Fix here
-              theta1 = testT$trace[[4]]$theta1,
-              theta2 = testT$trace[[4]]$theta2,
-              df1 = 6,
-              df2 = 6), margins = TRUE)
-              plotGrid(list(basis = testT$basis,
-              window = testT$window,
-              x = testT$x,
-              def.x = testT$x, # Fix here
-              theta1 = testT$trace[[6]]$theta1,
-              theta2 = testT$trace[[6]]$theta2,
-              df1 = 6,
-              df2 = 6), margins = TRUE)
+covModel <- RMexp(proj = "space", var = 1, scale = .25) *
+RMnugget(proj = "time", var = 1)
+data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), T = 1:TIME)
+y <- as.numeric(unlist(data@data))
+covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA) # Only space
+# No deformation reference, entries are independent in time
+test.nondef <- RFfit(covModelM, x = x[,1], y = x[,2], 
+                     data = matrix(y, ncol = TIME))
+# Calculates deformation, profle likelihood up to maxit times
+test.def <- bdef(x, y, tim = 1:TIME, cov.model = covModelM, maxit = 10)
+# Estimated deformation
+plotGrid(test.def, margins = TRUE)
+# Comparison of Variograms
+plot(test.nondef, ylim = c(0,1), xlim = c(0,0.7))
+plot(test.def$model, ylim = c(0,1), xlim = c(0,0.7))
+# Ground truth:
+plot(RMexp(var = 1, scale = .25), fct.type = "Variogram", 
+     xlim = c(0,0.7), ylim = c(0,1))
 
 }
 \references{

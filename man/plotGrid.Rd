@@ -5,8 +5,8 @@
 \title{Plot Spatial Deformations from bdef}
 \usage{
 plotGrid(model, nx = 20, ny = 20, colorO = "Black", colorD = "Red",
-  plot = TRUE, margins = FALSE, persp = FALSE, F1 = NULL, F2 = NULL,
-  ...)
+  plot = TRUE, margins = TRUE, persp = FALSE, F1 = NULL, F2 = NULL,
+  chull = FALSE, ...)
 }
 \arguments{
 \item{model}{An object returned by the function \code{\link{bdef}}.
@@ -24,7 +24,7 @@ those returned by \code{\link{bdef}}.}
 \item{plot}{Whether a plot should be produced or not. Defaults to TRUE.}
 
 \item{margins}{Whether a layout should be produced, with f1, f2 estimates
-shown along the corresponding axes. Defaults to FALSE.}
+shown along the corresponding axes. Defaults to TRUE.}
 
 \item{F1}{Allows the user to supply a function that generates the deformed
 coordinate y1. Defaults to NULL, in which case the
@@ -33,6 +33,11 @@ tensor product of B-splines is used instead.}
 \item{F2}{Allows the user to supply a function that generates the deformed
 coordinate y2. Defaults to NULL, in which case the
 tensor product of B-splines is used instead.}
+
+\item{chull}{Whether the deformation is displayed inside of the convex hull
+of the sampled sites, or a square window containing the sampled
+sites. Defaults to FALSE, which corresponds to the square
+window.}
 
 \item{...}{Extra parameters to be passed to perspective plot, in particular the
 azymutal direction and colatitude. See \code{\link{persp}} for
@@ -54,9 +59,6 @@ x1 <- (0:m)/m
 x2 <- (0:m)/m
 x <- as.matrix(expand.grid(x1,x2))
 n <- nrow(x)
-\dontrun{
-   plot(x, xlim = c(0,1), ylim = c(0,1))
-}
 K <- 4
 tempb1 <- bs(x[, 1], K, intercept = TRUE)
 tempb2 <- bs(x[, 2], K, intercept = TRUE)
@@ -73,12 +75,9 @@ fakeModel <- list(basis = list(B1 = bs(range(x[, 1]), K, intercept = TRUE),
                   theta2 = theta2,
                   df1 = K,
                   df2 = K)
+ plotGrid(fakeModel, margins = FALSE)
  plotGrid(fakeModel)
- plotGrid(fakeModel, margins = TRUE)
  plotGrid(fakeModel, persp = TRUE, theta = 15)
- # pdf("sim1.pdf"); plotGrid(fakeModel); dev.off()
- # pdf("sim2.pdf"); plotGrid(fakeModel, margins = TRUE); dev.off()
- # pdf("sim3.pdf"); plotGrid(fakeModel, persp = TRUE); dev.off()
 
 }
 \references{

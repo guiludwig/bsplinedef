@@ -34,7 +34,7 @@
 #' testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m, maxit = 10) # lambda estimated
 #' plotGrid(testT, margins = TRUE)
 #' plotGDdist(testT)
-plotGDdist <- function(model, plot = TRUE, lines = TRUE) {
+plotGDdist <- function(model, plot = TRUE, ggplot = FALSE, lines = TRUE) {
 
   if(is.null(model$fullDes)) stop("Please enable the fullDes option in bdef().")
   x <- model$fullDes$x
@@ -42,15 +42,18 @@ plotGDdist <- function(model, plot = TRUE, lines = TRUE) {
   spatial.locations <- unique(x)
   p <- nrow(spatial.locations)
   fine <- (length(p) > 0)&&(p>2)
-  if(!fine) stop("Error evaluating sample covariance matrix. Make sure that there are more than one observation at each sampled site.")
+  if(!fine) stop("Error evaluating sample covariance matrix. Make sure that there are more than one
+                 observation at each sampled site.")
   sample.sigma <- matrix(0, p, p)
   for(i in 1:p){
     for(j in i:p){
       index.i <- which(x[,1] == spatial.locations[i,1] & x[,2] == spatial.locations[i,2])
       index.j <- which(x[,1] == spatial.locations[j,1] & x[,2] == spatial.locations[j,2])
-      if(length(index.i) == 1 | length(index.j) == 1) stop("Sites must have more than one observation.")
+      if(length(index.i) == 1 | length(index.j) == 1) stop("Sites must have more than one
+                                                           observation.")
       tryCatch(sample.sigma[i,j] <- cov(y[index.i], y[index.j]),
-               error = function(e) simpleError(message = "sites must have equal number of observations."))
+               error = function(e) simpleError(message = "sites must have equal number of
+                                               observations."))
     }
   }
   S <- diag(sample.sigma)
@@ -64,20 +67,28 @@ plotGDdist <- function(model, plot = TRUE, lines = TRUE) {
   Dcoords <- as.matrix(Dcoords)
   # G <- RFcovmatrix(model, distances = Gcoords[lower.tri(Gcoords)], dim = nrow(Gcoords))
   # D <- RFcovmatrix(model, distances = Dcoords[lower.tri(Dcoords)], dim = nrow(Dcoords))
-  layout(matrix(c(1,0,2:3), ncol = 2))
-  plot(as.numeric(Gcoords)[as.numeric(Gcoords)>0],
-       as.numeric(sample.sigma)[as.numeric(Gcoords)>0], # sample.sigma[lower.tri(sample.sigma)],
-       main = "G-domain",
-       ylab = expression("Cov("*Y(s[i])*","*Y(s[j])*")"),
-       xlab = expression("|"*x[i] - x[j]*"|"))
-  # TO IMPLEMENT: LINES
-  plot(as.numeric(Gcoords)[as.numeric(Gcoords)>0],
-       as.numeric(Dcoords)[as.numeric(Dcoords)>0],
-       xlab = expression("|"*x[i] - x[j]*"|"),
-       ylab = expression("|"*f[i] - f[j]*"|"))
-  plot(as.numeric(Dcoords)[as.numeric(Dcoords)>0],
-       as.numeric(sample.sigma)[as.numeric(Dcoords) >0], # sample.sigma[lower.tri(sample.sigma)],
-       main = "D-domain",
-       ylab = expression("Cov("*Y(s[i])*","*Y(s[j])*")"),
-       xlab = expression("|"*f[i] - f[j]*"|"))
+  if(ggplot){
+    # Need to return cov.model?
+    # see ?print.RFfit
+    # predict lines!
+  } else {
+    layout(matrix(c(1,0,2:3), ncol = 2))
+    plot(as.numeric(Gcoords)[as.numeric(Gcoords)>0],
+         as.numeric(sample.sigma)[as.numeric(Gcoords)>0], # sample.sigma[lower.tri(sample.sigma)],
+         main = "G-domain",
+         ylab = expression("Cov("*Y(s[i])*","*Y(s[j])*")"),
+         xlab = expression("|"*x[i] - x[j]*"|"))
+    # TO IMPLEMENT: LINES
+    plot(as.numeric(Gcoords)[as.numeric(Gcoords)>0],
+         as.numeric(Dcoords)[as.numeric(Dcoords)>0],
+         xlab = expression("|"*x[i] - x[j]*"|"),
+         ylab = expression("|"*f[i] - f[j]*"|"))
+    abline(a=0,b=1)
+    plot(as.numeric(Dcoords)[as.numeric(Dcoords)>0],
+         as.numeric(sample.sigma)[as.numeric(Dcoords) >0], # sample.sigma[lower.tri(sample.sigma)],
+         main = "D-domain",
+         ylab = expression("Cov("*Y(s[i])*","*Y(s[j])*")"),
+         xlab = expression("|"*f[i] - f[j]*"|"))
+  }
+
 }
