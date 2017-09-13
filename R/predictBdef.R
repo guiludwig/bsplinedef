@@ -21,19 +21,23 @@ predict.bdef <- function(object, newdata) {
   # newDataRows <- which((tempX[,1] %in% newdata.def[,1]) & (tempX[,2] %in% newdata.def[,2]))
   dataRows <- newDataRows <- logical(nrow(tempX))
   for(i in 1:nrow(tempX)){
-    for(j in 1:nrow(olddata)){
-      if((tempX[i, 1] %in% olddata[j, 1]) & (tempX[i, 2] %in% olddata[j, 2]))
+    for(j in 1:nrow(object$def.x)){
+      if((tempX[i, 1] %in% object$def.x[j, 1]) & (tempX[i, 2] %in% object$def.x[j, 2]))
         dataRows[i] <- TRUE
     }
-    for(j in 1:nrow(newdata)){
-      if((tempX[i, 1] %in% newdata[j, 1]) & (tempX[i, 2] %in% newdata[j, 2]))
+    for(j in 1:nrow(newdata.def)){
+      if((tempX[i, 1] %in% newdata.def[j, 1]) & (tempX[i, 2] %in% newdata.def[j, 2]))
         newDataRows[i] <- TRUE
     }
   }
   Sigma <- S[dataRows, dataRows]
   SigmaCross <- S[dataRows,newDataRows]
   # Average residuals in time
-  R <- apply(resid(object$model)$residuals, 1, mean)
-  krige <- crossprod(SigmaCross,solve(Sigma,R))
-  return(list(krige = as.numeric(krige), newdata.def = newdata.def))
+  R <- as.matrix(resid(object$model)$residuals) # apply(resid(object$model)$residuals, 1, mean)
+  p <- ncol(R)
+  krige <- matrix(0, nrow(newdata.def), ncol(R))
+  for(j in seq_len(p)){
+    krige[,j] <- crossprod(SigmaCross,solve(Sigma,R[,j]))
+  }
+  return(list(krige = krige, newdata.def = newdata.def))
 }
