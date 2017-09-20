@@ -106,12 +106,15 @@
 #' @keywords Functional Data Analysis
 bdef <- function(x, y, tim = NULL,
                  cov.model = RMexp(var = NA, scale = NA) + RMnugget(var = NA),
-                 df1 = 6, df2 = 6,
+                 df1 = 6, df2 = 6, lambda = .5, 
+                 zeta1 = .5, zeta2 = .5,
                  window = list(x = range(x[,1]), y = range(x[,2])),
-                 maxit = 2, traceback = FALSE, fullDes = TRUE, debugg = TRUE, ...) {
-
-  RFoptions(printlevel=0, warn_normal_mode=FALSE)
-
+                 maxit = 2, traceback = FALSE, 
+                 fullDes = TRUE, debugg = FALSE, 
+                 ...) {
+  
+  RFoptions(printlevel = 0, warn_normal_mode = FALSE)
+  
   if(maxit < 0){
     maxit <- 1
   }
@@ -119,7 +122,7 @@ bdef <- function(x, y, tim = NULL,
     message("x coerced to be a matrix, please check input.")
     x <- as.matrix(x)
   }
-
+  
   # Assuming total separability for now!
   n <- nrow(x)
   m <- length(tim)
@@ -130,97 +133,50 @@ bdef <- function(x, y, tim = NULL,
   } else {
     x <- unique(x)
   }
-
+  
   B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE)
   B2 <- bs(range(x[, 2]), df = df2, intercept = TRUE)
   basis <- list(B1 = B1, B2 = B2)
   dB1 <- splineDesign(knots = c(rep(attr(B1, "Boundary.knots")[1],
-                                    attr(B1, "degree")+1),
+                                    attr(B1, "degree") + 1),
                                 attr(B1, "knots"),
                                 rep(attr(B1, "Boundary.knots")[2],
-                                    attr(B1, "degree")+1)),
+                                    attr(B1, "degree") + 1)),
                       x = x[, 1, drop = FALSE], outer.ok = TRUE,
                       derivs = 1)
   dB2 <- splineDesign(knots = c(rep(attr(B2, "Boundary.knots")[1],
-                                    attr(B2, "degree")+1),
+                                    attr(B2, "degree") + 1),
                                 attr(B2, "knots"),
                                 rep(attr(B2, "Boundary.knots")[2],
-                                    attr(B2, "degree")+1)),
+                                    attr(B2, "degree") + 1)),
                       x = x[, 2, drop = FALSE], outer.ok = TRUE,
                       derivs = 1)
   B1 <- predict(B1, x[ , 1, drop = FALSE])
   B2 <- predict(B2, x[ , 2, drop = FALSE])
-
+  
   W <- matrix(0, n, df1*df2)
   for(i in 1:n) W[i,] <- kronecker(B2[i, ], B1[i, ])
-
+  
   theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
                as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 2]))))
+  
+  model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = matrix(y, nrow = n), ...))
 
-  # ---------- Debugging
-  if(FALSE){
-    f1 <- f2 <- numeric(n)
-    bb1 <- predict(basis$B1, x[, 1])
-    bb2 <- predict(basis$B2, x[, 2])
-    for(i in 1:n){
-      f1[i] <- (bb1[i, ])%*%matrix(theta00[1:(df1*df2)], nrow = df1, ncol = df2)%*%bb2[i,]
-      f2[i] <- (bb1[i, ])%*%matrix(theta00[df1*df2 + 1:(df1*df2)], nrow = df1, ncol = df2)%*%bb2[i,]
-    }
-    dev.off()
-    plot(f1, x[,1])
-    plot(W%*%theta00[1:(df1*df2)], x[,1])
-    plot(f2, x[,2])
-    plot(W%*%theta00[df1*df2 + 1:(df1*df2)], x[,2])
-  }
-  # ----------
-
-  if(m == 0){
-    model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = y, ...))
+  if(debugg){
+    theta0 <- optim(theta00,
+                    fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                    DF1 = df1, DF2 = df2,
+                    M = model0, X = x, w = W,
+                    Y = matrix(y, nrow = n))$par
   } else {
-    #!# model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], T = tim, data = y, ...))
-    model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = matrix(y, nrow = n), ...))
+    theta0 <- optim(theta00,
+                    fn = likelihoodTargetPen, # gr = dLikelihoodTarget,
+                    DF1 = df1, DF2 = df2,
+                    M = model0, X = x, w = W,
+                    Y = matrix(y, nrow = n),
+                    LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par
   }
-
-  if(m==0){
-    if(debugg){
-      theta0 <- optim(par = theta00,
-                      fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                      DF1 = df1, DF2 = df2,
-                      M = model0, X = x, w = W,
-                      Y = y)$par
-    } else {
-      theta0 <- auglag(par = theta00,
-                       fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                       hin = jacobianConstraint2, # hin.jac = dJacobianConstraint,
-                       control.outer = list(trace = FALSE,
-                                            kkt2.check = FALSE),
-                       DF1 = df1, DF2 = df2,
-                       b1 = B1, b2 = B2,
-                       db1 = dB1, db2 = dB2,
-                       M = model0, X = x, w = W,
-                       Y = y)$par
-    }
-  } else {
-    if(debugg){
-      theta0 <- optim(theta00,
-                      fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                      DF1 = df1, DF2 = df2,
-                      M = model0, X = x, w = W,
-                      Y = matrix(y, ncol = m))$par
-    } else {
-      theta0 <- auglag(theta00,
-                       fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                       hin = jacobianConstraint2, # hin.jac = dJacobianConstraint,
-                       control.outer = list(trace = FALSE,
-                                            kkt2.check = FALSE),
-                       DF1 = df1, DF2 = df2,
-                       b1 = B1, b2 = B2,
-                       db1 = dB1, db2 = dB2,
-                       M = model0, X = x, w = W,
-                       Y = matrix(y, ncol = m))$par
-    }
-  }
-
+  
   # Traces the deformation map estimation
   if(traceback) {
     trace <- list()
@@ -228,51 +184,24 @@ bdef <- function(x, y, tim = NULL,
     trace[["theta_0"]] <- list(theta1 = theta0[1:(df1*df2)],
                                theta2 = theta0[1:(df1*df2) + (df1*df2)])
   }
-
+  
   f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
   f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
-
-  if(m == 0){
-    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
-    if(debugg){
-      theta.new <- optim(theta0,
-                         fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                         DF1 = df1, DF2 = df2,
-                         M = model0, X = x, w = W,
-                         Y = y)$par
-    } else {
-      theta.new <- auglag(theta0,
-                          fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                          hin = jacobianConstraint2, # hin.jac = dJacobianConstraint,
-                          control.outer = list(trace = FALSE,
-                                               kkt2.check = FALSE),
-                          DF1 = df1, DF2 = df2,
-                          b1 = B1, b2 = B2,
-                          db1 = dB1, db2 = dB2,
-                          M = model0, X = x, w = W,
-                          Y = y)$par
-    }
+  
+  model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
+  if(debugg){
+    theta.new <- optim(theta0,
+                       fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                       DF1 = df1, DF2 = df2,
+                       M = model0, X = x, w = W,
+                       Y = matrix(y, nrow = n))$par
   } else {
-    # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
-    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
-    if(debugg){
-      theta.new <- optim(theta0,
-                         fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                         DF1 = df1, DF2 = df2,
-                         M = model0, X = x, w = W,
-                         Y = matrix(y, ncol = m))$par
-    } else {
-      theta.new <- auglag(theta0,
-                          fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                          hin = jacobianConstraint2, # hin.jac = dJacobianConstraint,
-                          control.outer = list(trace = FALSE,
-                                               kkt2.check = FALSE),
-                          DF1 = df1, DF2 = df2,
-                          b1 = B1, b2 = B2,
-                          db1 = dB1, db2 = dB2,
-                          M = model0, X = x, w = W,
-                          Y = matrix(y, ncol = m))$par
-    }
+    theta.new <- optim(theta0,
+                       fn = likelihoodTargetPen, # gr = dLikelihoodTarget,
+                       DF1 = df1, DF2 = df2,
+                       M = model0, X = x, w = W,
+                       Y = matrix(y, nrow = n),
+                       LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par
   }
 
   # Traces the deformation map estimation
@@ -281,7 +210,7 @@ bdef <- function(x, y, tim = NULL,
     trace[["theta_1"]] <- list(theta1 = theta.new[1:(df1*df2)],
                                theta2 = theta.new[1:(df1*df2) + (df1*df2)])
   }
-
+  
   it <- 1
   condition <- TRUE
   while(it < maxit & condition){
@@ -289,47 +218,21 @@ bdef <- function(x, y, tim = NULL,
     theta0 <- theta.new
     f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
     f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
-    if(m == 0){
-      model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = y, ...))
-      if(debugg){
-        theta.new <- optim(theta0,
-                           fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                           DF1 = df1, DF2 = df2,
-                           M = model0, X = x, w = W,
-                           Y = y)$par
-      } else {
-        theta.new <- auglag(theta0,
-                            fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                            hin = jacobianConstraint2, # hin.jac = dJacobianConstraint,
-                            control.outer = list(trace = FALSE,
-                                                 kkt2.check = FALSE),
-                            DF1 = df1, DF2 = df2,
-                            b1 = B1, b2 = B2,
-                            db1 = dB1, db2 = dB2,
-                            M = model0, X = x, w = W,
-                            Y = y)$par
-      }
+
+    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
+    if(debugg){
+      theta.new <- optim(theta0,
+                         fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                         DF1 = df1, DF2 = df2,
+                         M = model0, X = x, w = W,
+                         Y = matrix(y, ncol = m))$par
     } else {
-      # model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = tim, data = y, ...))
-      model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
-      if(debugg){
-        theta.new <- optim(theta0,
-                           fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                           DF1 = df1, DF2 = df2,
-                           M = model0, X = x, w = W,
-                           Y = matrix(y, ncol = m))$par
-      } else {
-        theta.new <- auglag(theta0,
-                            fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                            hin = jacobianConstraint2, # hin.jac = dJacobianConstraint,
-                            control.outer = list(trace = FALSE,
-                                                 kkt2.check = FALSE),
-                            DF1 = df1, DF2 = df2,
-                            b1 = B1, b2 = B2,
-                            db1 = dB1, db2 = dB2,
-                            M = model0, X = x, w = W,
-                            Y = matrix(y, ncol = m))$par
-      }
+      theta.new <- optim(theta0,
+                         fn = likelihoodTargetPen, # gr = dLikelihoodTarget,
+                         DF1 = df1, DF2 = df2,
+                         M = model0, X = x, w = W,
+                         Y = matrix(y, nrow = n),
+                         LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par
     }
     tempCon <- abs(theta0 - theta.new)/abs(theta0)
     tempCon <- ifelse(is.nan(tempCon), TRUE, tempCon < 0.01) # ignores theta0 = 0 entries, keep opt
@@ -342,10 +245,10 @@ bdef <- function(x, y, tim = NULL,
                                             theta2 = theta.new[1:(df1*df2) + (df1*df2)])
     }
   }
-
+  
   f1 <- as.numeric(W%*%theta.new[1:(df1*df2)])
   f2 <- as.numeric(W%*%theta.new[1:(df1*df2) + (df1*df2)])
-
+  
   ret <- list(window = window,
               basis = basis,
               x = x, def.x = cbind(f1, f2),
@@ -371,11 +274,11 @@ bdef <- function(x, y, tim = NULL,
                           y = y)
     }
   }
-
+  
   class(ret) <- "bdef"
-
-  RFoptions(printlevel=1, warn_normal_mode=TRUE)
-
+  
+  RFoptions(printlevel = 1, warn_normal_mode = TRUE)
+  
   return(ret)
-
+  
 }

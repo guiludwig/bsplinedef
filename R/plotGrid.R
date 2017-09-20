@@ -72,7 +72,7 @@ plotGrid <- function(model, nx = 20, ny = 20,
                      colorO = "Black", colorD = "Red",
                      plot = TRUE, margins = TRUE,
                      persp = FALSE, F1 = NULL, F2 = NULL,
-                     chull = FALSE, ...) {
+                     chull = FALSE, offset = c(0,0), ...) {
   theta1 <- model$theta1
   theta2 <- model$theta2
   def.x <- model$def.x
@@ -113,7 +113,7 @@ plotGrid <- function(model, nx = 20, ny = 20,
   if(plot){
     plot(x, xlim = xl, ylim = yl, col = colorO,
          ylab = expression(y[2]), xlab = expression(y[1]))
-    points(def.x, xlim = xl, ylim = yl, col = colorD)
+    points(sweep(def.x, 2, offset[1:2]), xlim = xl, ylim = yl, col = colorD)
     if(chull){
       for (i in 1:ny) {
         xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),]
@@ -140,11 +140,11 @@ plotGrid <- function(model, nx = 20, ny = 20,
     } else {
       for (i in 1:ny) {
         lines(xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorO)
-        lines(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorD)
+        lines(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),]-offset[1], col = colorD)
       }
       for (j in 1:nx) {
         lines(xygrid[seq((1+(j-1)),nx*ny,nx),], col = colorO)
-        lines(fgrid[seq((1+(j-1)),nx*ny,nx),], col = colorD)
+        lines(fgrid[seq((1+(j-1)),nx*ny,nx),]-offset[2], col = colorD)
       }
     }
     if(margins){
