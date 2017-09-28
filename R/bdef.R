@@ -76,24 +76,22 @@
 #' return(-sin(angle)*x + cos(angle)*y + 0.5)
 #' }
 #' TIME <- 20
-#' covModel <- RMexp(proj = "space", var = 1, scale = .25) *
-#' RMnugget(proj = "time", var = 1)
+#' covModel <- RMexp(var = 1, scale = .25) + RMnugget(var = 1) # Independent in time
 #' data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), T = 1:TIME)
 #' y <- as.numeric(unlist(data@data))
-#' covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA) # Only space
+#' covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA)
 #' # No deformation reference, entries are independent in time
-#' test.nondef <- RFfit(covModelM, x = x[,1], y = x[,2], 
+#' test.nondef <- RFfit(covModelM, x = x[,1], y = x[,2], T = 1:TIME,
 #'                      data = matrix(y, ncol = TIME))
 #' # Calculates deformation, profle likelihood up to maxit times
 #' test.def <- bdef(x, y, tim = 1:TIME, cov.model = covModelM, maxit = 10)
 #' # Estimated deformation
-#' plotGrid(test.def, margins = TRUE)
+#' plotGrid(test.def)
 #' # Comparison of Variograms
-#' plot(test.nondef, ylim = c(0,1), xlim = c(0,0.7))
-#' plot(test.def$model, ylim = c(0,1), xlim = c(0,0.7))
-#' # Ground truth:
-#' plot(RMexp(var = 1, scale = .25), fct.type = "Variogram", 
-#'      xlim = c(0,0.7), ylim = c(0,1))
+#' plot(test.nondef, ylim = c(0,2), xlim = c(0,0.7),
+#'      model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+#' plot(test.def$model, ylim = c(0,2), xlim = c(0,0.7),
+#'      model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
 #'
 #' @author Guilherme Ludwig and Ronaldo Dias
 #'
@@ -109,7 +107,7 @@ bdef <- function(x, y, tim = NULL,
                  df1 = 6, df2 = 6, lambda = .5, 
                  zeta1 = .5, zeta2 = .5,
                  window = list(x = range(x[,1]), y = range(x[,2])),
-                 maxit = 2, traceback = FALSE, 
+                 maxit = 2, traceback = TRUE, 
                  fullDes = TRUE, debugg = FALSE, 
                  ...) {
   
@@ -160,7 +158,7 @@ bdef <- function(x, y, tim = NULL,
   theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
                as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 2]))))
   
-  model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = matrix(y, nrow = n), ...))
+  model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], T = 1:TIME, data = matrix(y, nrow = n), ...))
 
   if(debugg){
     theta0 <- optim(theta00,
@@ -188,7 +186,7 @@ bdef <- function(x, y, tim = NULL,
   f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
   f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
   
-  model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
+  model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = 1:TIME, data = matrix(y, nrow = n), ...))
   if(debugg){
     theta.new <- optim(theta0,
                        fn = likelihoodTarget, # gr = dLikelihoodTarget,
@@ -219,7 +217,7 @@ bdef <- function(x, y, tim = NULL,
     f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
     f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
 
-    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, data = matrix(y, nrow = n), ...))
+    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = 1:TIME, data = matrix(y, nrow = n), ...))
     if(debugg){
       theta.new <- optim(theta0,
                          fn = likelihoodTarget, # gr = dLikelihoodTarget,

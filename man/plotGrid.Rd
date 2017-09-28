@@ -6,7 +6,7 @@
 \usage{
 plotGrid(model, nx = 20, ny = 20, colorO = "Black", colorD = "Red",
   plot = TRUE, margins = TRUE, persp = FALSE, F1 = NULL, F2 = NULL,
-  chull = FALSE, ...)
+  chull = FALSE, offset = c(0, 0), ...)
 }
 \arguments{
 \item{model}{An object returned by the function \code{\link{bdef}}.

@@ -5,9 +5,9 @@
 \title{Spatial Deformation via tensor product of B-splines}
 \usage{
 bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
-  RMnugget(var = NA), df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y
-  = range(x[, 2])), maxit = 2, traceback = FALSE, fullDes = TRUE,
-  debugg = TRUE, ...)
+  RMnugget(var = NA), df1 = 6, df2 = 6, lambda = 0.5, zeta1 = 0.5,
+  zeta2 = 0.5, window = list(x = range(x[, 1]), y = range(x[, 2])),
+  maxit = 2, traceback = TRUE, fullDes = TRUE, debugg = FALSE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The
@@ -98,24 +98,22 @@ angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
 return(-sin(angle)*x + cos(angle)*y + 0.5)
 }
 TIME <- 20
-covModel <- RMexp(proj = "space", var = 1, scale = .25) *
-RMnugget(proj = "time", var = 1)
+covModel <- RMexp(var = 1, scale = .25) + RMnugget(var = 1) # Independent in time
 data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), T = 1:TIME)
 y <- as.numeric(unlist(data@data))
-covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA) # Only space
+covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA)
 # No deformation reference, entries are independent in time
-test.nondef <- RFfit(covModelM, x = x[,1], y = x[,2], 
+test.nondef <- RFfit(covModelM, x = x[,1], y = x[,2], T = 1:TIME,
                      data = matrix(y, ncol = TIME))
 # Calculates deformation, profle likelihood up to maxit times
 test.def <- bdef(x, y, tim = 1:TIME, cov.model = covModelM, maxit = 10)
 # Estimated deformation
-plotGrid(test.def, margins = TRUE)
+plotGrid(test.def)
 # Comparison of Variograms
-plot(test.nondef, ylim = c(0,1), xlim = c(0,0.7))
-plot(test.def$model, ylim = c(0,1), xlim = c(0,0.7))
-# Ground truth:
-plot(RMexp(var = 1, scale = .25), fct.type = "Variogram", 
-     xlim = c(0,0.7), ylim = c(0,1))
+plot(test.nondef, ylim = c(0,2), xlim = c(0,0.7),
+     model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+plot(test.def$model, ylim = c(0,2), xlim = c(0,0.7),
+     model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
 
 }
 \references{

@@ -4,31 +4,37 @@
 \alias{plotTraceback}
 \title{Plot deformation traceback as a function of iterations}
 \usage{
-plotTraceback()
+plotTraceback(model, sleep = 2, ...)
 }
 \description{
 This function is a debugging tool.
 }
 \examples{
 # Example using artificially generated data
+# Example using artificially generated data
 set.seed(1)
-n <- 50
-x1 <- runif(n)
-x2 <- runif(n)
-x <- cbind(x1,x2)
-F1 <- function(x1,x2) {
-  x1 - .2*sqrt(x1*x2)
+m <- 10
+x1 <- (0:m)/m
+x2 <- (0:m)/m
+x <- as.matrix(expand.grid(x1,x2))
+n <- nrow(x)
+F1 <- function(x1,x2, a = 2.5, b = 1.0) {
+x <- x1 - 0.5; y <- x2 - 0.5
+angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
+return(cos(angle)*x + sin(angle)*y + 0.5)
 }
-F2 <- function(x1,x2) {
-  .8*x2 + .4*sqrt(x1*x2) - .6*sqrt((1-x2)*x1)
+F2 <- function(x1,x2, a = 2.5, b = 1.0) {
+x <- x1 - 0.5; y <- x2 - 0.5
+angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
+return(-sin(angle)*x + cos(angle)*y + 0.5)
 }
 TIME <- 20
-covModel2 <- RMexp(proj = "space", var = .8, scale = 1) + RMnugget(proj = "time", var = .2)
-data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
-y <- as.numeric(unlist(data2@data))
-covModel2m <- RMexp(var = NA, scale = NA) + RMnugget(var=NA) # Only space, independent in time
-system.time({testT <- bdef(x, y, tim = 1:TIME, cov.model = covModel2m,
-              maxit = 10, traceback = TRUE)})
-plotGrid(testT, margins = TRUE)
-plotTraceback(testT, margins = TRUE)
+covModel <- RMexp(var = 1, scale = .25) + RMnugget(var = 1) # Independent in time
+data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), T = 1:TIME)
+y <- as.numeric(unlist(data@data))
+covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA)
+test.def <- bdef(x, y, tim = 1:TIME, cov.model = covModelM, maxit = 10)
+# Estimated deformation
+plotGrid(test.def)
+plotTraceback(test.def, margins = TRUE)
 }
