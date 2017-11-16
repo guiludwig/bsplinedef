@@ -5,9 +5,10 @@
 \title{Spatial Deformation via tensor product of B-splines}
 \usage{
 bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
-  RMnugget(var = NA), df1 = 6, df2 = 6, lambda = 0.5, zeta1 = 0.5,
-  zeta2 = 0.5, window = list(x = range(x[, 1]), y = range(x[, 2])),
-  maxit = 2, traceback = TRUE, fullDes = TRUE, debugg = FALSE, ...)
+  RMnugget(var = NA), type = c("penalized", "jacobian", "none"), df1 = 6,
+  df2 = 6, lambda = 0.5, zeta1 = 0.5, zeta2 = 0.5, window = list(x =
+  range(x[, 1]), y = range(x[, 2])), maxit = 2, traceback = TRUE,
+  fullDes = TRUE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The
@@ -31,6 +32,10 @@ for details. Defaults to Exponential model with
 unknown variance and scale, without a nugget effect. Right
 now the model doesn't allow space-time covariance models.
 TODO: default RMexp(var = NA, scale = NA) + RMnugget(var = NA)}
+
+\item{type}{Method to fit the deformation model, a choice of "jacobian" (which
+includes a regularization term for the positive jacobian, slow),
+"penalized" (quadratic penalty, default) and "none" (no penalty).}
 
 \item{df1}{Degrees of freedom for the tensor product of splines along
 the x[,1] coordinate. Defaults to 4.}
@@ -58,9 +63,6 @@ copy of the dataset. Needed for the
 \code{\link{plotGDdist}} function, but can be set
 to FALSE if the user has no interest in GDdist.
 Defaults to TRUE.}
-
-\item{debugg}{Debug flag for testing convergence of likelihood
-optimization with gradients.}
 
 \item{...}{Additional arguments for RFfit.}
 }

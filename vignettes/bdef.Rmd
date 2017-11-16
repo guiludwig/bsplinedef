@@ -10,11 +10,15 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This vignette describes how to install and use the `bsplinedef` package, a package for finding spatial deformations using the tensor product of B-splines. This is a work in progress and subject to change. For now, the package fits the semi-parametric covariance model \[\Gamma(x_1, x_2) =  \sigma^2(\|f_1(x_1,x_2) - f_2(x_1,x_2)\|; \boldsymbol\Delta)\] where $x_1, x_2 \in G \subset \mathbb{R}^2$ are sampled spatial locations in a geostatistical domain $G;$ $f_1,$ $f_2$ are the tensor product of B-spline functions, each with $K_1 \times K_2$ basis functions, respectively; and $\sigma^2(\cdot)$ is a stationary, isotropic covariance function with parameters $\boldsymbol\Delta$. The parameters $\boldsymbol\Delta$ as well as B-spline coefficients $\boldsymbol\theta_1$ and $\boldsymbol\theta_2$ are estimated by minimizing \[Q(\boldsymbol\theta_1, \boldsymbol\theta_2, \boldsymbol\Delta) \propto |\boldsymbol\Sigma|^{-n/2} \exp\left\{-\frac{1}{2}\left(\mathbf{Y} - \boldsymbol\mu \right)^t \boldsymbol\Sigma^{-1} \left(\mathbf{Y} - \boldsymbol\mu \right)\right\},\] subject to \[ |\mathbf{J}| = \frac{\partial f_1}{\partial x_1} \times \frac{\partial f_2}{\partial x_2} - \frac{\partial f_1}{\partial x_2} \times \frac{\partial f_2}{\partial x_1} > 0.\] 
+This vignette describes how to install and use the `bsplinedef` package, a package for finding spatial deformations using the tensor product of B-splines. This is a work in progress and subject to change. For now, the package fits the semi-parametric covariance model \[\Gamma(x_1, x_2) =  \sigma^2(\|f_1(x_1,x_2) - f_2(x_1,x_2)\|; \boldsymbol\Delta)\] where $x_1, x_2 \in G \subset \mathbb{R}^2$ are sampled spatial locations in a geostatistical domain $G;$ $f_1,$ $f_2$ are the tensor product of B-spline functions, each with $K_1 \times K_2$ basis functions, respectively; and $\sigma^2(\cdot)$ is a stationary, isotropic covariance function with parameters $\boldsymbol\Delta$. The parameters $\boldsymbol\Delta$ as well as B-spline coefficients $\boldsymbol\theta_1$ and $\boldsymbol\theta_2$ are estimated by minimizing \[Q(\boldsymbol\theta_1, \boldsymbol\theta_2, \boldsymbol\Delta) \propto |\boldsymbol\Sigma|^{-n/2} \exp\left\{-\frac{1}{2}\left(\mathbf{Y} - \boldsymbol\mu \right)^t \boldsymbol\Sigma^{-1} \left(\mathbf{Y} - \boldsymbol\mu \right)\right\},\] penalized by \[ \mathbf{P}(\boldsymbol\theta_1, \boldsymbol\theta_2) = \lambda \sum_{h=1}^2 \left[\rho \left (\theta_{i,j,h} - \theta_{i+1,j,h} \right ) + \rho \left (\theta_{i,j,h} - \theta_{i,j+1,h} \right ) \right],\] where $\rho$ is a concave function (TBD).
 
 ## Installation
 
 The most recent version of `bsplinedef` is available at <https://github.com/guiludwig/bsplinedef>. To install the package directly from github, we recommed the `install_github` function available from the `devtools` package. 
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
 
 ```{r eval=FALSE}
 library(devtools) # install if missing
@@ -98,7 +102,7 @@ model$theta1 # Spline coefficients for f_1
 
 The fitting process supports some customization. For example, one may be interested in a different covariance function. We may change it with the following command:
 
-```{r eval=FALSE}
+```{r}
 # Value set to $nu = 2.5$
 G <- RMmatern(nu = 2.5, var = NA, scale = NA) # No nugget
 # documentation, values left as NA are to be estimated
@@ -110,23 +114,32 @@ model.matern$model
 
 We provide two plotting functions along with the `bsplinedef` package. The first one, named `plotGrid`, displays the deformation grid on the data.
 
-```{r fig.align="center", message=FALSE}
-plotGrid(model, margins = TRUE)
+```{r fig.align="center", fig.align="center", message=FALSE, fig.width=6, fig.height=6}
+plotGrid(model)
 ```
 
-```{r eval=FALSE}
-plotGrid(model.matern, margins = TRUE)
+```{r fig.align="center", fig.align="center", message=FALSE, fig.width=6, fig.height=6}
+plotGrid(model.matern)
 ```
 
 The second function, `plotGDdist`, produces a comparison between sample covariances using the G-domain and D-domain distances for reference. It only works if all sampled sites have more than one observation, which might require pruning of the data to use.
 
-```{r}
+```{r fig.align="center", message=FALSE, fig.width=6, fig.height=6}
 plotGDdist(model)
 ```
 
 One can also obtain the variogram using the `RandomFields` built in function.
 
-```{r}
+```{r eval = FALSE, echo=FALSE, message=FALSE}
+png("variog.png")
+plot(model$model, ylim = c(0,2), xlim = c(0,0.7),
+     model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+dev.off()
+```
+
+```{r eval = FALSE}
 plot(model$model, ylim = c(0,2), xlim = c(0,0.7),
      model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
 ```
+
+![](variog.png)

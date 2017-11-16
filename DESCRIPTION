@@ -5,6 +5,7 @@ Depends:
     splines,
     fields,
     RandomFields,
+    alabama,
     ggplot2
 Type: Package
 Title: Spatial Deformation via Tensor Product of B-splines
