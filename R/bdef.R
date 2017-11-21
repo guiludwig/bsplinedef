@@ -77,12 +77,16 @@
 #' return(-sin(angle)*x + cos(angle)*y + 0.5)
 #' }
 #' TIME <- 20
-#' covModel <- RMexp(var = 1, scale = .25) + RMnugget(var = 1) # Independent in time
-#' data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), T = 1:TIME)
+#' covModel <- RMexp(var = 1, scale = .25, proj = "space") + RMnugget(var = 1) # Independent in time
+#' data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), 
+#'                    T = seq(from = 1, by = 1, len = TIME)) # order ~ expand.grid(x, y, T)
 #' y <- as.numeric(unlist(data@data))
+#' # Model for spatial dependence, time is assumed independent
 #' covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA)
 #' # No deformation reference, entries are independent in time
-#' test.nondef <- RFfit(covModelM, x = x[,1], y = x[,2], T = 1:TIME,
+#' test.nondef <- RFfit(covModelM, x = x[,1], y = x[,2], 
+#'                      # T = seq(from = 1, by = 1, len = TIME), # slow?
+#'                      # data = y)
 #'                      data = matrix(y, ncol = TIME))
 #' # Calculates deformation, profle likelihood up to maxit times
 #' test.def <- bdef(x, y, tim = 1:TIME, cov.model = covModelM, maxit = 10)
@@ -162,8 +166,10 @@ bdef <- function(x, y, tim = NULL,
   theta00 <- c(as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 1]))),
                as.numeric(solve(crossprod(W) + .001*diag(df1*df2)/max(W), crossprod(W, x[, 2]))))
   
-  model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], T = 1:TIME, data = matrix(y, nrow = n), ...),
-                silent = TRUE)
+  suppressMessages({
+    model0 <- try(RFfit(model = cov.model, x = x[,1], y = x[,2], data = matrix(y, nrow = n), ...),
+                  silent = TRUE)
+  })
 
   theta0 <- switch(type, 
                    penalized = optim(theta00,
@@ -213,8 +219,10 @@ bdef <- function(x, y, tim = NULL,
   f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
   f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
   
-  model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = 1:TIME, 
-                      data = matrix(y, nrow = n), ...))
+  suppressMessages({
+    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, # T = tim, 
+                        data = matrix(y, nrow = n), ...), silent = TRUE)
+  })
   theta.new <- switch(type, 
                       penalized = optim(theta0,
                                         fn = likelihoodTargetPen, # gr = dLikelihoodTarget,
@@ -267,8 +275,10 @@ bdef <- function(x, y, tim = NULL,
     f1 <- as.numeric(W%*%theta0[1:(df1*df2)])
     f2 <- as.numeric(W%*%theta0[1:(df1*df2) + (df1*df2)])
     
-    model1 <- try(RFfit(model = cov.model, x = f1, y = f2, T = 1:TIME, 
-                        data = matrix(y, nrow = n), ...))
+    suppressMessages({
+      model1 <- try(RFfit(model = cov.model, x = f1, y = f2, # T = tim, 
+                          data = matrix(y, nrow = n), ...), silent = TRUE)
+    })
     theta.new <- switch(type, 
                         penalized = optim(theta0,
                                           fn = likelihoodTargetPen, # gr = dLikelihoodTarget,
@@ -327,7 +337,8 @@ bdef <- function(x, y, tim = NULL,
               theta2 = theta.new[1:(df1*df2) + (df1*df2)],
               df1 = df1,
               df2 = df2,
-              model = model1)
+              model = model1, 
+              type = type)
   # Traces the deformation map estimation
   if(traceback){
     ret$trace <- trace

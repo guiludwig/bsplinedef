@@ -9,7 +9,7 @@ Depends:
     ggplot2
 Type: Package
 Title: Spatial Deformation via Tensor Product of B-splines
-Version: 0.1.91
+Version: 0.1.92
 Author: Guilherme Ludwig [aut, cre],
     Ronaldo Dias [aut],
     Paul Sampson [ctb]
