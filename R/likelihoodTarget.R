@@ -6,6 +6,6 @@ likelihoodTarget <- function(theta,
   theta2 <- theta[1:(DF1*DF2) + (DF1*DF2)]
   f1 <- as.numeric(w%*%theta1)
   f2 <- as.numeric(w%*%theta2)
-  lik <- -1*RFlikelihood(M, x = f1, y = f2, data = Y)$loglikelihood
+  lik <- -1*RFlikelihood(M, x = f1, y = f2, data = Y)$loglikelihood  # bottleneck
   return(lik)
 }

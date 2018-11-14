@@ -6,10 +6,11 @@ Depends:
     fields,
     RandomFields,
     alabama,
-    ggplot2
+    ggplot2,
+    EnviroStat
 Type: Package
 Title: Spatial Deformation via Tensor Product of B-splines
-Version: 0.1.92
+Version: 0.1.93
 Author: Guilherme Ludwig [aut, cre],
     Ronaldo Dias [aut],
     Paul Sampson [ctb]

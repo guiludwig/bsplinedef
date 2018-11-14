@@ -2,6 +2,7 @@
 
 S3method(predict,bdef)
 export(bdef)
+export(findTuning)
 export(plotGDdist)
 export(plotGrid)
 export(plotTraceback)

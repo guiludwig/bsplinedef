@@ -5,10 +5,10 @@
 \title{Spatial Deformation via tensor product of B-splines}
 \usage{
 bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
-  RMnugget(var = NA), type = c("penalized", "jacobian", "none"), df1 = 6,
-  df2 = 6, lambda = 0.5, zeta1 = 0.5, zeta2 = 0.5, window = list(x =
-  range(x[, 1]), y = range(x[, 2])), maxit = 2, traceback = TRUE,
-  fullDes = TRUE, ...)
+  RMnugget(var = NA), type = c("penalized", "jacobian", "none"),
+  target = c("likelihood", "variogram"), df1 = 6, df2 = 6, lambda = 0.5,
+  zeta1 = 0.5, zeta2 = 0.5, window = list(x = range(x[, 1]), y = range(x[,
+  2])), maxit = 2, traceback = TRUE, fullDes = TRUE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The

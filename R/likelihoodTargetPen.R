@@ -11,6 +11,6 @@ likelihoodTargetPen <- function(theta,
   likP <- -1*RFlikelihood(M, x = f1, y = f2, data = Y)$loglikelihood + 
     LAMBDA * injectSuff(matrix(theta1, nrow = DF1, ncol = DF2), 
                         matrix(theta2, nrow = DF1, ncol = DF2), 
-                        z1, z2)
+                        z1, z2) # bottleneck
   return(likP)
 }
