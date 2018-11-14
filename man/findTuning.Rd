@@ -52,5 +52,13 @@ covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA)
 # Calculates deformation, profle likelihood up to maxit times
 test.def <- bdef(x, y, tim = 1:TIME, cov.model = covModelM, maxit = 10)
 tuningChoice <- findTuning(test.def, verbose = TRUE)
+require(ggplot2)
+require(dplyr)
+tuningChoice \%>\%
+mutate(zeta = factor(zeta)) \%>\%
+mutate(lambda = log(lambda)) \%>\%
+ggplot(aes(x = lambda, y = LOOCV, color = zeta)) + 
+geom_point() +
+geom_line(aes(group = zeta))
 }
 }

@@ -78,6 +78,27 @@ fakeModel <- list(basis = list(B1 = bs(range(x[, 1]), K, intercept = TRUE),
  plotGrid(fakeModel, margins = FALSE)
  plotGrid(fakeModel)
  plotGrid(fakeModel, persp = TRUE, theta = 15)
+# Example with truth function
+set.seed(1)
+m <- 10
+x1 <- (0:m)/m
+x2 <- (0:m)/m
+x <- as.matrix(expand.grid(x1,x2))
+n <- nrow(x)
+F1 <- function(x1,x2, a = 2.5, b = 1.0) {
+  x <- x1 - 0.5; y <- x2 - 0.5
+angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
+return(cos(angle)*x + sin(angle)*y + 0.5)
+}
+F2 <- function(x1,x2, a = 2.5, b = 1.0) {
+  x <- x1 - 0.5; y <- x2 - 0.5
+angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
+return(y + x^2)
+}
+plotGrid(list(window = list(x = range(x1), y = range(x2)),
+x = x, def.x = cbind(F1(x[,1],x[,2]), 
+                                  F2(x[,1],x[,2]))),
+        F1 = F1, F2 = F2)
 
 }
 \references{
