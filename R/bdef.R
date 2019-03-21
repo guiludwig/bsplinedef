@@ -198,7 +198,20 @@ bdef <- function(x, y, tim = NULL,
                                   M = model0, X = x, w = W,
                                   Y = matrix(y, nrow = n))$par)
   } else {
-    stop("Option to be implemented")
+    #!#  nMDS: Sampson & Guttorp p. 110
+    Sigma <- RFcovmatrix(cov.model, x = x[,1], y = x[,2])
+    SV <- kronecker(matrix(1, nrow = nrow(Sigma)), 
+                    matrix(diag(Sigma), ncol = ncol(Sigma))) + 
+      kronecker(matrix(1, ncol = ncol(Sigma)), 
+                matrix(diag(Sigma), nrow = nrow(Sigma))) +
+      -2*Sigma # Sample Variog
+    hatf0 <- cmdscale(SV) # TODO: Nonmetric, instead of metric
+    theta0 <- optim(theta00,
+                     fn = mdsTargetPen, 
+                     DF1 = df1, DF2 = df2,
+                     M = model0, X = x, w = W,
+                     Y = hatf0,
+                     LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par
   }
   
   # Traces the deformation map estimation
@@ -241,7 +254,20 @@ bdef <- function(x, y, tim = NULL,
                                      M = model0, X = x, w = W,
                                      Y = matrix(y, nrow = n))$par)
   } else {
-    stop("Option to be implemented")
+    #!#  nMDS: Sampson & Guttorp p. 110
+    Sigma <- RFcovmatrix(cov.model, x = f1, y = f2)
+    SV <- kronecker(matrix(1, nrow = nrow(Sigma)), 
+                    matrix(diag(Sigma), ncol = ncol(Sigma))) + 
+      kronecker(matrix(1, ncol = ncol(Sigma)), 
+                matrix(diag(Sigma), nrow = nrow(Sigma))) +
+      -2*Sigma # Sample Variog
+    hatf0 <- cmdscale(SV) # TODO: Nonmetric, instead of metric
+    theta.new <- optim(theta0,
+                    fn = mdsTargetPen, 
+                    DF1 = df1, DF2 = df2,
+                    M = model0, X = x, w = W,
+                    Y = hatf0,
+                    LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par
   }
   # Traces the deformation map estimation
   if(traceback) {
@@ -286,7 +312,20 @@ bdef <- function(x, y, tim = NULL,
                                        M = model0, X = x, w = W,
                                        Y = matrix(y, nrow = n))$par)
     } else {
-      stop("Option to be implemented")
+      #!#  nMDS: Sampson & Guttorp p. 110
+      Sigma <- RFcovmatrix(cov.model, x = f1, y = f2)
+      SV <- kronecker(matrix(1, nrow = nrow(Sigma)), 
+                      matrix(diag(Sigma), ncol = ncol(Sigma))) + 
+        kronecker(matrix(1, ncol = ncol(Sigma)), 
+                  matrix(diag(Sigma), nrow = nrow(Sigma))) +
+        -2*Sigma # Sample Variog
+      hatf0 <- cmdscale(SV) # TODO: Nonmetric, instead of metric
+      theta.new <- optim(theta0,
+                         fn = mdsTargetPen, 
+                         DF1 = df1, DF2 = df2,
+                         M = model0, X = x, w = W,
+                         Y = hatf0,
+                         LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par
     }
     tempCon <- abs(theta0 - theta.new)/abs(theta0)
     tempCon <- ifelse(is.nan(tempCon), TRUE, tempCon < 1e-6) # ignores theta0 = 0 entries, keep opt
