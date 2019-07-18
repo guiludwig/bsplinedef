@@ -43,9 +43,8 @@
 #'                     \code{\link{plotGDdist}} function, but can be set
 #'                     to FALSE if the user has no interest in GDdist.
 #'                     Defaults to TRUE.
-#' @param type Method to fit the deformation model, a choice of "jacobian" (which
-#'                     includes a regularization term for the positive jacobian, slow),
-#'                     "penalized" (quadratic penalty, default) and "none" (no penalty).
+#' @param type Method to fit the deformation model, a choice of "jacobian" (default),
+#'                     and "none" (no penalty).
 #' @param ... Additional arguments for RFfit.
 #'
 #' @export
@@ -109,7 +108,7 @@
 #' @keywords Functional Data Analysis
 bdef <- function(x, y, tim = NULL,
                  cov.model = RMexp(var = NA, scale = NA) + RMnugget(var = NA),
-                 type = c("penalized", "jacobian", "none"),
+                 type = c("jacobian", "none"),
                  target = c("likelihood", "variogram"),
                  df1 = 6, df2 = 6, lambda = .5, 
                  zeta1 = .5, zeta2 = .5,
@@ -176,12 +175,6 @@ bdef <- function(x, y, tim = NULL,
   
   if(target == "likelihood"){
     theta0 <- switch(type, 
-                     penalized = optim(theta00,
-                                       fn = likelihoodTargetPen, # gr = dLikelihoodTarget,
-                                       DF1 = df1, DF2 = df2,
-                                       M = model0, X = x, w = W,
-                                       Y = matrix(y, nrow = n),
-                                       LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par,
                      jacobian = auglag(theta00,
                                        fn = likelihoodTarget, # gr = dLikelihoodTarget,
                                        hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
@@ -232,12 +225,6 @@ bdef <- function(x, y, tim = NULL,
   
   if(target == "likelihood"){
     theta.new <- switch(type, 
-                        penalized = optim(theta0,
-                                          fn = likelihoodTargetPen, # gr = dLikelihoodTarget,
-                                          DF1 = df1, DF2 = df2,
-                                          M = model0, X = x, w = W,
-                                          Y = matrix(y, nrow = n),
-                                          LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par,
                         jacobian = auglag(theta0,
                                           fn = likelihoodTarget, # gr = dLikelihoodTarget,
                                           hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
@@ -290,12 +277,6 @@ bdef <- function(x, y, tim = NULL,
     })
     if(target == "likelihood"){
       theta.new <- switch(type, 
-                          penalized = optim(theta0,
-                                            fn = likelihoodTargetPen, # gr = dLikelihoodTarget,
-                                            DF1 = df1, DF2 = df2,
-                                            M = model0, X = x, w = W,
-                                            Y = matrix(y, nrow = n),
-                                            LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par,
                           jacobian = auglag(theta0,
                                             fn = likelihoodTarget, # gr = dLikelihoodTarget,
                                             hin = jacobianConstraint, # hin.jac = dJacobianConstraint,

@@ -5,7 +5,7 @@ Depends:
     splines,
     fields,
     RandomFields,
-    alabama,
+    nloptr,
     ggplot2,
     EnviroStat,
     geoR
