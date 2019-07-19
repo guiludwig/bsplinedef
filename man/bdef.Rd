@@ -5,10 +5,11 @@
 \title{Spatial Deformation via tensor product of B-splines}
 \usage{
 bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
-  RMnugget(var = NA), type = c("penalized", "jacobian", "none"),
-  target = c("likelihood", "variogram"), df1 = 6, df2 = 6, lambda = 0.5,
-  zeta1 = 0.5, zeta2 = 0.5, window = list(x = range(x[, 1]), y = range(x[,
-  2])), maxit = 2, traceback = TRUE, fullDes = TRUE, ...)
+  RMnugget(var = NA), type = c("jacobian", "none"),
+  target = c("stress", "likelihood"), df1 = 6, df2 = 6,
+  window = list(x = range(x[, 1]), y = range(x[, 2])), maxit = 2,
+  traceback = TRUE, fullDes = TRUE, xtol = 1e-05, mxeval = 100,
+  ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The
@@ -33,9 +34,8 @@ unknown variance and scale, without a nugget effect. Right
 now the model doesn't allow space-time covariance models.
 TODO: default RMexp(var = NA, scale = NA) + RMnugget(var = NA)}
 
-\item{type}{Method to fit the deformation model, a choice of "jacobian" (which
-includes a regularization term for the positive jacobian, slow),
-"penalized" (quadratic penalty, default) and "none" (no penalty).}
+\item{type}{Method to fit the deformation model, a choice of "jacobian" (default),
+and "none" (no penalty).}
 
 \item{df1}{Degrees of freedom for the tensor product of splines along
 the x[,1] coordinate. Defaults to 4.}

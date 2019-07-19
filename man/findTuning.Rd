@@ -4,8 +4,9 @@
 \alias{findTuning}
 \title{Find Tuning parameters for B-spline spatial deformation}
 \usage{
-findTuning(model, grid.lambda = 10^(-5:5), grid.zeta = min(apply(model$x, 2,
-  function(x) diff(range(x)))) * (1:10)/20, verbose = FALSE)
+findTuning(model, grid.lambda = 10^(-5:5),
+  grid.zeta = min(apply(model$x, 2, function(x) diff(range(x)))) *
+  (1:10)/20, verbose = FALSE)
 }
 \arguments{
 \item{model}{an object from the bdef function.}

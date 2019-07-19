@@ -1,4 +1,6 @@
-mdsConstraint <- function(theta){
+mdsConstraint <- function(theta,
+                          DF1 = df1, DF2 = df2,
+                          M = model0, X = x, Y = hatf0, w = W){
   # to be called as eval_g_ineq
   K2 <- length(theta)/2
   K <- sqrt(K2)
@@ -16,7 +18,7 @@ mdsConstraint <- function(theta){
         theta1[i,j-1]*(theta2[i, j]-theta2[i-1, j]) - 
         theta1[i,j]*(theta2[i,j-1]-theta2[i-1, j-1]) +
         theta1[i-1,j]*(theta2[i, j-1]-theta2[i-1, j-1]) - 
-        theta1[i-1,j-1]*(theta2[i,j]-theta2[i-1, j]) +
+        theta1[i-1,j-1]*(theta2[i,j]-theta2[i-1, j])
       restrictions[h+2] <- restrictions[h] +
         theta1[i,j]*(theta2[i-1,j]-theta2[i-1, j-1]) -
         theta1[i-1,j]*(theta2[i,j]-theta2[i, j-1]) + 
@@ -30,5 +32,7 @@ mdsConstraint <- function(theta){
       h <- h + 4
     }
   }
-  return(list(constraints = restrictions))
+  # return(list(constraints = -1*restrictions,
+  #             jacobian = ??))
+  return(-1*restrictions)
 }

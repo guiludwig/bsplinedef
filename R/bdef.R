@@ -109,12 +109,12 @@
 bdef <- function(x, y, tim = NULL,
                  cov.model = RMexp(var = NA, scale = NA) + RMnugget(var = NA),
                  type = c("jacobian", "none"),
-                 target = c("likelihood", "variogram"),
-                 df1 = 6, df2 = 6, lambda = .5, 
-                 zeta1 = .5, zeta2 = .5,
+                 target = c("stress", "likelihood"),
+                 df1 = 6, df2 = 6, 
                  window = list(x = range(x[,1]), y = range(x[,2])),
                  maxit = 2, traceback = TRUE, 
                  fullDes = TRUE, 
+                 xtol = 1e-5, mxeval = 100,
                  ...) {
   
   RFoptions(printlevel = 0, warn_normal_mode = FALSE)
@@ -138,11 +138,12 @@ bdef <- function(x, y, tim = NULL,
     x <- x[,-1*(3:ncol(x))]
     x <- unique(x)
   } else {
-    x <- unique(x)
+    # x <- unique(x) # Why I needed this?
+    x <- x
   }
   
-  B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE)
-  B2 <- bs(range(x[, 2]), df = df2, intercept = TRUE)
+  B1 <- bs(range(x[, 1]), df = df1, intercept = TRUE, degree = 1)
+  B2 <- bs(range(x[, 2]), df = df2, intercept = TRUE, degree = 1)
   basis <- list(B1 = B1, B2 = B2)
   dB1 <- splineDesign(knots = c(rep(attr(B1, "Boundary.knots")[1],
                                     attr(B1, "degree") + 1),
@@ -150,14 +151,14 @@ bdef <- function(x, y, tim = NULL,
                                 rep(attr(B1, "Boundary.knots")[2],
                                     attr(B1, "degree") + 1)),
                       x = x[, 1, drop = FALSE], outer.ok = TRUE,
-                      derivs = 1)
+                      derivs = 1, ord = 2)
   dB2 <- splineDesign(knots = c(rep(attr(B2, "Boundary.knots")[1],
                                     attr(B2, "degree") + 1),
                                 attr(B2, "knots"),
                                 rep(attr(B2, "Boundary.knots")[2],
                                     attr(B2, "degree") + 1)),
                       x = x[, 2, drop = FALSE], outer.ok = TRUE,
-                      derivs = 1)
+                      derivs = 1, ord = 2)
   B1 <- predict(B1, x[ , 1, drop = FALSE])
   B2 <- predict(B2, x[ , 2, drop = FALSE])
   
@@ -174,17 +175,18 @@ bdef <- function(x, y, tim = NULL,
   })
   
   if(target == "likelihood"){
+    # NOT WORKING FOR NOW!
     theta0 <- switch(type, 
-                     jacobian = auglag(theta00,
-                                       fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                                       hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
-                                       control.outer = list(trace = FALSE,
-                                                            kkt2.check = FALSE),
-                                       DF1 = df1, DF2 = df2,
-                                       b1 = B1, b2 = B2,
-                                       db1 = dB1, db2 = dB2,
-                                       M = model0, X = x, w = W,
-                                       Y = matrix(y, ncol = m))$par,
+                     jacobian = nloptr::auglag(theta00,
+                                               fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                                               hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
+                                               control.outer = list(trace = FALSE,
+                                                                    kkt2.check = FALSE),
+                                               DF1 = df1, DF2 = df2,
+                                               b1 = B1, b2 = B2,
+                                               db1 = dB1, db2 = dB2,
+                                               M = model0, X = x, w = W,
+                                               Y = matrix(y, ncol = m))$solution,
                      none = optim(theta00,
                                   fn = likelihoodTarget, # gr = dLikelihoodTarget,
                                   DF1 = df1, DF2 = df2,
@@ -192,19 +194,26 @@ bdef <- function(x, y, tim = NULL,
                                   Y = matrix(y, nrow = n))$par)
   } else {
     #!#  nMDS: Sampson & Guttorp p. 110
-    Sigma <- RFcovmatrix(cov.model, x = x[,1], y = x[,2])
+    converted <- matrix(y, nrow = nrow(x))
+    # colnames(converted) <- c(paste0("y", seq_len(ncol(converted)-2)),
+    #                          "coords.x1","coords.x2")
+    Sigma <- var(t(converted)) # RFvariogram(data = converted) # RFcovmatrix(model0, x = x[,1], y = x[,2])
     SV <- kronecker(matrix(1, nrow = nrow(Sigma)), 
                     matrix(diag(Sigma), ncol = ncol(Sigma))) + 
       kronecker(matrix(1, ncol = ncol(Sigma)), 
                 matrix(diag(Sigma), nrow = nrow(Sigma))) +
       -2*Sigma # Sample Variog
-    hatf0 <- cmdscale(SV) # TODO: Nonmetric, instead of metric
-    theta0 <- optim(theta00,
-                     fn = mdsTargetPen, 
-                     DF1 = df1, DF2 = df2,
-                     M = model0, X = x, w = W,
-                     Y = hatf0,
-                     LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par
+    hatf0 <- MASS::isoMDS(SV, trace = FALSE)$points
+    theta0 <- nloptr::nloptr(theta00,
+                             eval_f = mdsTargetPen, 
+                             # eval_grad_f = , # easy, todo
+                             eval_g_ineq = mdsConstraint, 
+                             opts = list(algorithm = "NLOPT_LN_COBYLA",
+                                         xtol_rel = xtol, 
+                                         maxeval = mxeval), # required
+                             DF1 = df1, DF2 = df2,
+                             M = model0, X = x, w = W,
+                             Y = hatf0)$solution
   }
   
   # Traces the deformation map estimation
@@ -224,37 +233,26 @@ bdef <- function(x, y, tim = NULL,
   })
   
   if(target == "likelihood"){
+    # Else not needed
+    # NOT WORKING FOR NOW!
     theta.new <- switch(type, 
-                        jacobian = auglag(theta0,
-                                          fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                                          hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
-                                          control.outer = list(trace = FALSE,
-                                                               kkt2.check = FALSE),
-                                          DF1 = df1, DF2 = df2,
-                                          b1 = B1, b2 = B2,
-                                          db1 = dB1, db2 = dB2,
-                                          M = model0, X = x, w = W,
-                                          Y = matrix(y, ncol = m))$par,
-                        none = optim(theta0,
+                        jacobian = nloptr::auglag(theta00,
+                                                  fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                                                  hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
+                                                  control.outer = list(trace = FALSE,
+                                                                       kkt2.check = FALSE),
+                                                  DF1 = df1, DF2 = df2,
+                                                  b1 = B1, b2 = B2,
+                                                  db1 = dB1, db2 = dB2,
+                                                  M = model0, X = x, w = W,
+                                                  Y = matrix(y, ncol = m))$solution,
+                        none = optim(theta00,
                                      fn = likelihoodTarget, # gr = dLikelihoodTarget,
                                      DF1 = df1, DF2 = df2,
                                      M = model0, X = x, w = W,
                                      Y = matrix(y, nrow = n))$par)
   } else {
-    #!#  nMDS: Sampson & Guttorp p. 110
-    Sigma <- RFcovmatrix(cov.model, x = f1, y = f2)
-    SV <- kronecker(matrix(1, nrow = nrow(Sigma)), 
-                    matrix(diag(Sigma), ncol = ncol(Sigma))) + 
-      kronecker(matrix(1, ncol = ncol(Sigma)), 
-                matrix(diag(Sigma), nrow = nrow(Sigma))) +
-      -2*Sigma # Sample Variog
-    hatf0 <- cmdscale(SV) # TODO: Nonmetric, instead of metric
-    theta.new <- optim(theta0,
-                    fn = mdsTargetPen, 
-                    DF1 = df1, DF2 = df2,
-                    M = model0, X = x, w = W,
-                    Y = hatf0,
-                    LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par
+    theta.new <- theta0 # Won't iterate
   }
   # Traces the deformation map estimation
   if(traceback) {
@@ -264,7 +262,8 @@ bdef <- function(x, y, tim = NULL,
   }
   
   it <- 1
-  condition <- TRUE
+  condition <- (target == "likelihood") # Iterates if likelihood, else skip
+  
   while(it < maxit & condition){
     model0 <- model1
     theta0 <- theta.new
@@ -276,38 +275,24 @@ bdef <- function(x, y, tim = NULL,
                           data = matrix(y, nrow = n), ...), silent = TRUE)
     })
     if(target == "likelihood"){
-      theta.new <- switch(type, 
-                          jacobian = auglag(theta0,
-                                            fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                                            hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
-                                            control.outer = list(trace = FALSE,
-                                                                 kkt2.check = FALSE),
-                                            DF1 = df1, DF2 = df2,
-                                            b1 = B1, b2 = B2,
-                                            db1 = dB1, db2 = dB2,
-                                            M = model0, X = x, w = W,
-                                            Y = matrix(y, ncol = m))$par,
-                          none = optim(theta0,
-                                       fn = likelihoodTarget, # gr = dLikelihoodTarget,
-                                       DF1 = df1, DF2 = df2,
-                                       M = model0, X = x, w = W,
-                                       Y = matrix(y, nrow = n))$par)
-    } else {
-      #!#  nMDS: Sampson & Guttorp p. 110
-      Sigma <- RFcovmatrix(cov.model, x = f1, y = f2)
-      SV <- kronecker(matrix(1, nrow = nrow(Sigma)), 
-                      matrix(diag(Sigma), ncol = ncol(Sigma))) + 
-        kronecker(matrix(1, ncol = ncol(Sigma)), 
-                  matrix(diag(Sigma), nrow = nrow(Sigma))) +
-        -2*Sigma # Sample Variog
-      hatf0 <- cmdscale(SV) # TODO: Nonmetric, instead of metric
-      theta.new <- optim(theta0,
-                         fn = mdsTargetPen, 
-                         DF1 = df1, DF2 = df2,
-                         M = model0, X = x, w = W,
-                         Y = hatf0,
-                         LAMBDA = lambda, z1 = zeta1, z2 = zeta2)$par
-    }
+      # NOT WORKING FOR NOW!
+      theta0 <- switch(type, 
+                       jacobian = nloptr::auglag(theta00,
+                                                 fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                                                 hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
+                                                 control.outer = list(trace = FALSE,
+                                                                      kkt2.check = FALSE),
+                                                 DF1 = df1, DF2 = df2,
+                                                 b1 = B1, b2 = B2,
+                                                 db1 = dB1, db2 = dB2,
+                                                 M = model0, X = x, w = W,
+                                                 Y = matrix(y, ncol = m))$solution,
+                       none = optim(theta00,
+                                    fn = likelihoodTarget, # gr = dLikelihoodTarget,
+                                    DF1 = df1, DF2 = df2,
+                                    M = model0, X = x, w = W,
+                                    Y = matrix(y, nrow = n))$par)
+    } 
     tempCon <- abs(theta0 - theta.new)/abs(theta0)
     tempCon <- ifelse(is.nan(tempCon), TRUE, tempCon < 1e-6) # ignores theta0 = 0 entries, keep opt
     condition <- all(tempCon)

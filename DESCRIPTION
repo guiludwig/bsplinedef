@@ -6,12 +6,10 @@ Depends:
     fields,
     RandomFields,
     nloptr,
-    ggplot2,
-    EnviroStat,
-    geoR
+    ggplot2
 Type: Package
 Title: Spatial Deformation via Tensor Product of B-splines
-Version: 0.1.94
+Version: 0.1.95
 Author: Guilherme Ludwig [aut, cre],
     Ronaldo Dias [aut],
     Paul Sampson [ctb]
@@ -28,7 +26,7 @@ Description: Computes coordinate transformations of the form
 License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1
 Suggests:
     knitr,
     rmarkdown
