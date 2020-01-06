@@ -38,7 +38,7 @@ x1 <- (0:m)/m
 x2 <- (0:m)/m
 x <- as.matrix(expand.grid(x1,x2))
 n <- nrow(x)
-TIME <- 20
+TIME <- 100
 F1 <- function(x1,x2, a = 2.5, b = 1.0) {
 x <- x1 - 0.5; y <- x2 - 0.5
 angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
@@ -58,15 +58,16 @@ library(bsplinedef)
 plotGrid(list(window = list(x = range(x1), y = range(x2)),
               x = x, def.x = cbind(F1(x[,1],x[,2]), 
                                    F2(x[,1],x[,2]))),
-         F1 = F1, F2 = F2)
+         F1 = F1, F2 = F2, nx = m + 1, ny = m + 1)
 ```
 
 The `bsplinedef` inherits some syntax from the `RandomFields` package, particularly how to set up a covariance model for the D-distance. First, we will simulate data $Y$ on the D-coordinates $(y_1, y_2)$ using a stationary covariance model, with functions from the `RandomFields` package.
 
 ```{r message=FALSE}
-# Sets up a Matern covariance model
-covModel <- RMexp(var = 1, scale = .25) + RMnugget(var = 1) # Independent in time
-data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), T = 1:TIME)
+ # Independent in time
+covModel <- RMexp(var = 1, scale = 0.25, proj = "space") * RMnugget(var = 1, proj = "time")
+data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]),
+                   T = seq(from = 1, by = 1, len = TIME)) 
 # Extracts values from object RFspatialPointsDataFrame
 y  <- as.numeric(unlist(data@data))
 ```
@@ -84,8 +85,9 @@ For example, fitting the model to the simulated dataset:
 
 ```{r}
 # Parameters to be estimated set as NA
-cov.to.estimate <- RMexp(var = NA, scale = NA) + RMnugget(var = NA)
-model <- bdef(x, y, tim = 1:TIME, cov.model = cov.to.estimate)
+cov.to.estimate <- RMexp(var = NA, scale = NA) 
+model <- bdef(x, y, tim = 1:TIME, cov.model = cov.to.estimate,
+              df1 = 6, df2 = 6)
 ```
 
 Estimated parameters can be recovered with
@@ -104,9 +106,9 @@ The fitting process supports some customization. For example, one may be interes
 
 ```{r}
 # Value set to $nu = 2.5$
-G <- RMmatern(nu = 2.5, var = NA, scale = NA) # No nugget
+G <- RMmatern(nu = 2.5, var = NA, scale = NA)
 # documentation, values left as NA are to be estimated
-model.matern <- bdef(x, y, cov.model = G)
+model.matern <- bdef(x, y, tim = 1:TIME, cov.model = G)
 model.matern$model
 ```
 
@@ -133,13 +135,13 @@ One can also obtain the variogram using the `RandomFields` built in function.
 ```{r eval = FALSE, echo=FALSE, message=FALSE}
 png("variog.png")
 plot(model$model, ylim = c(0,2), xlim = c(0,0.7),
-     model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+     model = list(`true model` = RMexp(var = 1, scale = .25)))
 dev.off()
 ```
 
 ```{r eval = FALSE}
 plot(model$model, ylim = c(0,2), xlim = c(0,0.7),
-     model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+     model = list(`true model` = RMexp(var = 1, scale = .25)))
 ```
 
 ![](variog.png)

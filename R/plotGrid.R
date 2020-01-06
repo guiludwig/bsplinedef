@@ -132,8 +132,9 @@ plotGrid <- function(model, nx = 20, ny = 20,
     layout(matrix(c(2,2,0,1,1,3,1,1,3), ncol = 3))
   }
   if(plot){
-    plot(x, xlim = xl, ylim = yl, col = colorO,
-         ylab = expression(y[2]), xlab = expression(y[1]))
+    plot(sweep(xyg, 2, offset[1:2]), 
+         xlim = xl - offset[1], ylim = yl - offset[2], col = colorO,
+         ylab = expression(y[2]), xlab = expression(y[1]), ...)
     points(sweep(def.x, 2, offset[1:2]), xlim = xl, ylim = yl, col = colorD)
     if(chull){
       for (i in 1:ny) {
@@ -142,8 +143,8 @@ plotGrid <- function(model, nx = 20, ny = 20,
         condition <- rep(TRUE, tempN)
         for(j in 1:tempN){
           if(condition[j]){
-            lines(xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorO)
-            lines(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorD)
+            lines(sweep(xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], 2, offset[1:2]), col = colorO)
+            lines(sweep(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], 2, offset[1:2]), col = colorD)
           }
         }
       }
@@ -153,39 +154,39 @@ plotGrid <- function(model, nx = 20, ny = 20,
         condition <- rep(TRUE, tempN) # is
         for(i in 1:tempN){
           if(condition[i]){
-            lines(xygrid[seq((1+(j-1)),nx*ny,nx),], col = colorO)
-            lines(fgrid[seq((1+(j-1)),nx*ny,nx),], col = colorD)
+            lines(sweep(xygrid[seq((1+(j-1)),nx*ny,nx),], 2, offset[1:2]), col = colorO)
+            lines(sweep(fgrid[seq((1+(j-1)),nx*ny,nx),], 2, offset[1:2]), col = colorD)
           }
         }
       }
     } else {
       for (i in 1:ny) {
-        lines(xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], col = colorO)
-        lines(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),]-offset[1], col = colorD)
+        lines(sweep(xygrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], 2, offset[1:2]), col = colorO)
+        lines(sweep(fgrid[(1+(i-1)*nx):((1+(i-1)*nx)+nx-1),], 2, offset[1:2]), col = colorD)
       }
       for (j in 1:nx) {
-        lines(xygrid[seq((1+(j-1)),nx*ny,nx),], col = colorO)
-        lines(fgrid[seq((1+(j-1)),nx*ny,nx),]-offset[2], col = colorD)
+        lines(sweep(xygrid[seq((1+(j-1)),nx*ny,nx),], 2, offset[1:2]), col = colorO)
+        lines(sweep(fgrid[seq((1+(j-1)),nx*ny,nx),], 2, offset[1:2]), col = colorD)
       }
     }
     if(margins){
-      image(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[1:nx,]),
+      image(list(x = xgrid - offset[1], y = ygrid - offset[2], z = matrix(f2, nx, ny)[1:nx,]),
             col = tim.colors(64),
             ylab = expression(x[2]), xlab = expression(x[1]))
-      contour(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[1:nx,]),
+      contour(list(x = xgrid - offset[1], y = ygrid - offset[2], z = matrix(f2, nx, ny)[1:nx,]),
               add = TRUE)
-      image(list(x = ygrid, y = xgrid, z = matrix(f1, nx, ny)[1:ny,]),
+      image(list(x = ygrid - offset[2], y = xgrid - offset[1], z = matrix(f1, nx, ny)[1:ny,]),
             col = tim.colors(64),
             ylab = expression(x[2]), xlab = expression(x[1]))
-      contour(list(x = ygrid, y = xgrid, z = matrix(f1, nx, ny)[1:ny,]),
+      contour(list(x = ygrid - offset[2], y = xgrid - offset[1], z = matrix(f1, nx, ny)[1:ny,]),
               add = TRUE)
     }
     if(persp){
       # Is this dimension flip correct? Also persp is pretty bad to visualize
-      persp(list(x = xgrid, y = ygrid, z = matrix(f2, nx, ny)[1:nx,]),
+      persp(list(x = xgrid - offset[1], y = ygrid - offset[2], z = matrix(f2, nx, ny)[1:nx,]),
             xlab = expression(x[1]), ylab = expression(x[2]), zlab = expression(y[1]),
             ...)
-      persp(list(x = ygrid, y = xgrid, z = matrix(f1, nx, ny)[1:ny,]),
+      persp(list(x = ygrid - offset[2], y = xgrid - offset[1], z = matrix(f1, nx, ny)[1:ny,]),
             xlab = expression(x[1]), ylab = expression(x[2]), zlab = expression(y[1]),
             ...)
     }

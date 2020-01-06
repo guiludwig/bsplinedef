@@ -4,12 +4,11 @@
 \alias{bdef}
 \title{Spatial Deformation via tensor product of B-splines}
 \usage{
-bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA) +
-  RMnugget(var = NA), type = c("jacobian", "none"),
-  target = c("stress", "likelihood"), df1 = 6, df2 = 6,
-  window = list(x = range(x[, 1]), y = range(x[, 2])), maxit = 2,
-  traceback = TRUE, fullDes = TRUE, xtol = 1e-05, mxeval = 100,
-  ...)
+bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA),
+  type = c("jacobian", "none"), target = c("stress", "likelihood"),
+  df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y = range(x[, 2])),
+  maxit = 2, traceback = TRUE, fullDes = TRUE, xtol = 1e-04,
+  mxeval = 100, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The

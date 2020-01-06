@@ -107,7 +107,7 @@
 #' @keywords Spatial Statistics
 #' @keywords Functional Data Analysis
 bdef <- function(x, y, tim = NULL,
-                 cov.model = RMexp(var = NA, scale = NA) + RMnugget(var = NA),
+                 cov.model = RMexp(var = NA, scale = NA),
                  type = c("jacobian", "none"),
                  target = c("stress", "likelihood"),
                  df1 = 6, df2 = 6, 
@@ -215,6 +215,8 @@ bdef <- function(x, y, tim = NULL,
     # colnames(converted) <- c(paste0("y", seq_len(ncol(converted)-2)),
     #                          "coords.x1","coords.x2")
     Sigma <- var(t(converted)) # RFvariogram(data = converted) # RFcovmatrix(model0, x = x[,1], y = x[,2])
+    # Cor <- Sigma/sqrt(diag(Sigma) %o% diag(Sigma))
+    # SV <- 2 - 2 * Cor
     SV <- kronecker(matrix(1, nrow = nrow(Sigma)), 
                     matrix(diag(Sigma), ncol = ncol(Sigma))) + 
       kronecker(matrix(1, ncol = ncol(Sigma)), 
@@ -269,7 +271,7 @@ bdef <- function(x, y, tim = NULL,
     # Else not needed
     # NOT WORKING FOR NOW!
     theta.new <- switch(type, 
-                        jacobian = nloptr::auglag(theta00,
+                        jacobian = nloptr::auglag(theta0,
                                                   fn = likelihoodTarget, # gr = dLikelihoodTarget,
                                                   hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
                                                   control.outer = list(trace = FALSE,
@@ -277,12 +279,12 @@ bdef <- function(x, y, tim = NULL,
                                                   DF1 = df1, DF2 = df2,
                                                   b1 = B1, b2 = B2,
                                                   db1 = dB1, db2 = dB2,
-                                                  M = model0, X = x, w = W,
+                                                  M = model1, X = x, w = W,
                                                   Y = matrix(y, ncol = m))$solution,
-                        none = optim(theta00,
+                        none = optim(theta0,
                                      fn = likelihoodTarget, # gr = dLikelihoodTarget,
                                      DF1 = df1, DF2 = df2,
-                                     M = model0, X = x, w = W,
+                                     M = model1, X = x, w = W,
                                      Y = matrix(y, nrow = n))$par)
   } else {
     theta.new <- theta0 # Won't iterate
@@ -310,7 +312,7 @@ bdef <- function(x, y, tim = NULL,
     if(target == "likelihood"){
       # NOT WORKING FOR NOW!
       theta0 <- switch(type, 
-                       jacobian = nloptr::auglag(theta00,
+                       jacobian = nloptr::auglag(theta0,
                                                  fn = likelihoodTarget, # gr = dLikelihoodTarget,
                                                  hin = jacobianConstraint, # hin.jac = dJacobianConstraint,
                                                  control.outer = list(trace = FALSE,
@@ -320,7 +322,7 @@ bdef <- function(x, y, tim = NULL,
                                                  db1 = dB1, db2 = dB2,
                                                  M = model0, X = x, w = W,
                                                  Y = matrix(y, ncol = m))$solution,
-                       none = optim(theta00,
+                       none = optim(theta0,
                                     fn = likelihoodTarget, # gr = dLikelihoodTarget,
                                     DF1 = df1, DF2 = df2,
                                     M = model0, X = x, w = W,
