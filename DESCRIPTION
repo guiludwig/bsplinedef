@@ -1,6 +1,6 @@
 Package: bsplinedef
 Depends:
-    R (>= 3.1.0),
+    R (>= 3.5.0),
     MASS,
     splines,
     fields,
@@ -9,7 +9,7 @@ Depends:
     ggplot2
 Type: Package
 Title: Spatial Deformation via Tensor Product of B-splines
-Version: 0.1.95
+Version: 0.1.96
 Author: Guilherme Ludwig [aut, cre],
     Ronaldo Dias [aut],
     Paul Sampson [ctb]

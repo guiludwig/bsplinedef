@@ -132,14 +132,7 @@ plotGDdist(model)
 
 One can also obtain the variogram using the `RandomFields` built in function.
 
-```{r eval = FALSE, echo=FALSE, message=FALSE}
-png("variog.png")
-plot(model$model, ylim = c(0,2), xlim = c(0,0.7),
-     model = list(`true model` = RMexp(var = 1, scale = .25)))
-dev.off()
-```
-
-```{r eval = FALSE}
+```{r}
 plot(model$model, ylim = c(0,2), xlim = c(0,0.7),
      model = list(`true model` = RMexp(var = 1, scale = .25)))
 ```
