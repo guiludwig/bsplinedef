@@ -45,6 +45,9 @@
 #'                     Defaults to TRUE.
 #' @param type Method to fit the deformation model, a choice of "jacobian" (default),
 #'                     and "none" (no penalty).
+#' @param iterate Keep iterating nonmetric multidimensional scaling using
+#'                     variogram function as transformation. Defaults to FALSE.
+#'                     Currently not very efficient.
 #' @param ... Additional arguments for RFfit.
 #'
 #' @export
@@ -96,6 +99,14 @@
 #'      model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
 #' plot(test.def$model, ylim = c(0,2), xlim = c(0,0.7),
 #'      model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+#' \dontrun{
+#' test.def2 <- bdef(x, y, tim = 1:TIME, cov.model = covModelM, maxit = 10, iterate = TRUE)
+#' # Estimated deformation
+#' plotGrid(test.def2)
+#' # Comparison of Variograms
+#' plot(test.def2$model, ylim = c(0,2), xlim = c(0,0.7),
+#'      model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+#' }
 #'
 #' @author Guilherme Ludwig and Ronaldo Dias
 #'
@@ -114,7 +125,7 @@ bdef <- function(x, y, tim = NULL,
                  window = list(x = range(x[,1]), y = range(x[,2])),
                  maxit = 2, traceback = TRUE, 
                  fullDes = TRUE, 
-                 xtol = 1e-4, mxeval = 500,
+                 xtol = 1e-4, mxeval = 500, iterate = FALSE,
                  ...) {
   
   RFoptions(printlevel = 0, warn_normal_mode = FALSE)
@@ -210,7 +221,6 @@ bdef <- function(x, y, tim = NULL,
                                   M = model0, X = x, w = W,
                                   Y = matrix(y, nrow = n))$par)
   } else {
-    #!#  nMDS: Sampson & Guttorp p. 110
     converted <- matrix(y, nrow = nrow(x))
     # colnames(converted) <- c(paste0("y", seq_len(ncol(converted)-2)),
     #                          "coords.x1","coords.x2")
@@ -268,7 +278,6 @@ bdef <- function(x, y, tim = NULL,
   })
   
   if(target == "likelihood"){
-    # Else not needed
     # NOT WORKING FOR NOW!
     theta.new <- switch(type, 
                         jacobian = nloptr::auglag(theta0,
@@ -286,8 +295,37 @@ bdef <- function(x, y, tim = NULL,
                                      DF1 = df1, DF2 = df2,
                                      M = model1, X = x, w = W,
                                      Y = matrix(y, nrow = n))$par)
-  } else {
+  } else if(!iterate) {
     theta.new <- theta0 # Won't iterate
+  } else {
+    hatf1 <- optim(as.numeric(hatf0),
+                   fn = mdsKruskal,
+                   sv = SV, M = model1)$par
+    hatf1 <- matrix(hatf1, ncol = 2)
+    theta.new <- switch(type, 
+                        jacobian = nloptr::nloptr(theta0,
+                                                  eval_f = mdsTarget,
+                                                  ub = rep(Inf, length(theta00)),
+                                                  lb = rep(0, length(theta00)),
+                                                  eval_grad_f = dMdsTarget, 
+                                                  eval_g_ineq = mdsConstraint, 
+                                                  opts = list(algorithm = "NLOPT_LD_MMA", #"NLOPT_LN_COBYLA",
+                                                              xtol_rel = xtol, 
+                                                              maxeval = mxeval), # required
+                                                  DF1 = df1, DF2 = df2,
+                                                  M = model1, X = x, w = W,
+                                                  Y = hatf1),
+                        none = optim(theta0,
+                                     fn = mdsTarget, gr = dMdsTarget,
+                                     method = "BFGS",
+                                     DF1 = df1, DF2 = df2,
+                                     M = model1, X = x, w = W,
+                                     Y = hatf1))
+    if(type == "jacobian" && theta.new$status == 5) warning("Maxeval reached, perhaps increase to attain convergence?")
+    hatf0 <- hatf1
+    theta.new <- switch(type,
+                        jacobian = theta.new$solution,
+                        none = theta.new$par)
   }
   # Traces the deformation map estimation
   if(traceback) {
@@ -297,7 +335,7 @@ bdef <- function(x, y, tim = NULL,
   }
   
   it <- 1
-  condition <- (target == "likelihood") # Iterates if likelihood, else skip
+  condition <- (target == "likelihood") | iterate # Iterates if likelihood, else skip
   
   while(it < maxit & condition){
     model0 <- model1
@@ -327,7 +365,36 @@ bdef <- function(x, y, tim = NULL,
                                     DF1 = df1, DF2 = df2,
                                     M = model0, X = x, w = W,
                                     Y = matrix(y, nrow = n))$par)
-    } 
+    } else {
+      hatf1 <- optim(as.numeric(hatf0),
+                     fn = mdsKruskal,
+                     sv = SV, M = model1)$par
+      hatf1 <- matrix(hatf1, ncol = 2)
+      theta.new <- switch(type, 
+                          jacobian = nloptr::nloptr(theta0,
+                                                    eval_f = mdsTarget,
+                                                    ub = rep(Inf, length(theta00)),
+                                                    lb = rep(0, length(theta00)),
+                                                    eval_grad_f = dMdsTarget, 
+                                                    eval_g_ineq = mdsConstraint, 
+                                                    opts = list(algorithm = "NLOPT_LD_MMA", #"NLOPT_LN_COBYLA",
+                                                                xtol_rel = xtol, 
+                                                                maxeval = mxeval), # required
+                                                    DF1 = df1, DF2 = df2,
+                                                    M = model1, X = x, w = W,
+                                                    Y = hatf1),
+                          none = optim(theta0,
+                                       fn = mdsTarget, gr = dMdsTarget,
+                                       method = "BFGS",
+                                       DF1 = df1, DF2 = df2,
+                                       M = model1, X = x, w = W,
+                                       Y = hatf1))
+      if(type == "jacobian" && theta.new$status == 5) warning("Maxeval reached, perhaps increase to attain convergence?")
+      hatf0 <- hatf1
+      theta.new <- switch(type,
+                          jacobian = theta.new$solution,
+                          none = theta.new$par)
+    }
     tempCon <- abs(theta0 - theta.new)/abs(theta0)
     tempCon <- ifelse(is.nan(tempCon), TRUE, tempCon < 1e-6) # ignores theta0 = 0 entries, keep opt
     condition <- all(tempCon)

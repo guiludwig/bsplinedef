@@ -32,7 +32,7 @@ covModel2 <- RMexp(proj = "space", var = 1, scale = .25) *
   RMnugget(proj = "time", var = 1)
 data2 <- RFsimulate(covModel2, x = F1(x1,x2), y = F2(x1,x2), T = 1:TIME)
 y <- as.numeric(unlist(data2@data))
-\\notrun{
+\dontrun{
 matplot(1:TIME, t(matrix(y, ncol = TIME)), type = "b", lty = 1, pch = 1)
 }
 covModel2m <- RMexp(var = NA, scale = NA) # Only space?

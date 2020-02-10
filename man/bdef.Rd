@@ -6,9 +6,9 @@
 \usage{
 bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA),
   type = c("jacobian", "none"), target = c("stress", "likelihood"),
-  df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y = range(x[, 2])),
-  maxit = 2, traceback = TRUE, fullDes = TRUE, xtol = 1e-04,
-  mxeval = 100, ...)
+  df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y = range(x[,
+  2])), maxit = 2, traceback = TRUE, fullDes = TRUE, xtol = 1e-04,
+  mxeval = 500, iterate = FALSE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The
@@ -62,6 +62,10 @@ copy of the dataset. Needed for the
 \code{\link{plotGDdist}} function, but can be set
 to FALSE if the user has no interest in GDdist.
 Defaults to TRUE.}
+
+\item{iterate}{Keep iterating nonmetric multidimensional scaling using
+variogram function as transformation. Defaults to FALSE.
+Currently not very efficient.}
 
 \item{...}{Additional arguments for RFfit.}
 }
@@ -119,6 +123,14 @@ plot(test.nondef, ylim = c(0,2), xlim = c(0,0.7),
      model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
 plot(test.def$model, ylim = c(0,2), xlim = c(0,0.7),
      model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+\dontrun{
+test.def2 <- bdef(x, y, tim = 1:TIME, cov.model = covModelM, maxit = 10, iterate = TRUE)
+# Estimated deformation
+plotGrid(test.def2)
+# Comparison of Variograms
+plot(test.def2$model, ylim = c(0,2), xlim = c(0,0.7),
+     model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+}
 
 }
 \references{

@@ -10,7 +10,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This vignette describes how to install and use the `bsplinedef` package, a package for finding spatial deformations using the tensor product of B-splines. This is a work in progress and subject to change. For now, the package fits the semi-parametric covariance model \[\Gamma(x_1, x_2) =  \sigma^2(\|f_1(x_1,x_2) - f_2(x_1,x_2)\|; \boldsymbol\Delta)\] where $x_1, x_2 \in G \subset \mathbb{R}^2$ are sampled spatial locations in a geostatistical domain $G;$ $f_1,$ $f_2$ are the tensor product of B-spline functions, each with $K_1 \times K_2$ basis functions, respectively; and $\sigma^2(\cdot)$ is a stationary, isotropic covariance function with parameters $\boldsymbol\Delta$. The parameters $\boldsymbol\Delta$ as well as B-spline coefficients $\boldsymbol\theta_1$ and $\boldsymbol\theta_2$ are estimated by minimizing \[Q(\boldsymbol\theta_1, \boldsymbol\theta_2, \boldsymbol\Delta) \propto |\boldsymbol\Sigma|^{-n/2} \exp\left\{-\frac{1}{2}\left(\mathbf{Y} - \boldsymbol\mu \right)^t \boldsymbol\Sigma^{-1} \left(\mathbf{Y} - \boldsymbol\mu \right)\right\},\] penalized by \[ \mathbf{P}(\boldsymbol\theta_1, \boldsymbol\theta_2) = \lambda \sum_{h=1}^2 \left[\rho \left (\theta_{i,j,h} - \theta_{i+1,j,h} \right ) + \rho \left (\theta_{i,j,h} - \theta_{i,j+1,h} \right ) \right],\] where $\rho$ is a concave function (TBD).
+This vignette describes how to install and use the `bsplinedef` package, a package for finding spatial deformations using the tensor product of B-splines. This is a work in progress and subject to change. For now, the package fits the semi-parametric covariance model \[\Gamma(x_1, x_2) =  \sigma^2(\|f_1(x_1,x_2) - f_2(x_1,x_2)\|; \boldsymbol\Delta)\] where $x_1, x_2 \in G \subset \mathbb{R}^2$ are sampled spatial locations in a geostatistical domain $G;$ $f_1,$ $f_2$ are the tensor product of B-spline functions, each with $K_1 \times K_2$ basis functions, respectively; and $\sigma^2(\cdot)$ is a stationary, isotropic covariance function with parameters $\boldsymbol\Delta$. The parameters $\boldsymbol\Delta$ are estimated by minimizing \[Q(\boldsymbol\Delta) \propto |\boldsymbol\Sigma|^{-n/2} \exp\left\{-\frac{1}{2}\left(\mathbf{Y} - \boldsymbol\mu \right)^t \boldsymbol\Sigma^{-1} \left(\mathbf{Y} - \boldsymbol\mu \right)\right\},\] while the parameters $\boldsymbol\theta_1, \boldsymbol\theta_2$ are obtained by smoothing a multidimensional scaling transform of the original coordinates, regularized by a term that ensures no folding of the deformation surfaces $(f_1, f_2).$ 
 
 ## Installation
 
@@ -25,7 +25,7 @@ library(devtools) # install if missing
 install_github("guiludwig/bsplinedef")
 ```
 
-The `bsplinedef` package depends on `RandomFields`, `fields` and `splines`, among others. It also uses `knitr` and `rmarkdown` to build the documentation.
+The `bsplinedef` package depends on `RandomFields`, `nloptr` and `splines`, among others. It also uses `knitr` and `rmarkdown` to build the documentation.
 
 ## Usage: simulated example
 
@@ -38,7 +38,7 @@ x1 <- (0:m)/m
 x2 <- (0:m)/m
 x <- as.matrix(expand.grid(x1,x2))
 n <- nrow(x)
-TIME <- 100
+TIME <- 20
 F1 <- function(x1,x2, a = 2.5, b = 1.0) {
 x <- x1 - 0.5; y <- x2 - 0.5
 angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
@@ -65,7 +65,7 @@ The `bsplinedef` inherits some syntax from the `RandomFields` package, particula
 
 ```{r message=FALSE}
  # Independent in time
-covModel <- RMexp(var = 1, scale = 0.25, proj = "space") * RMnugget(var = 1, proj = "time")
+covModel <- RMexp(var = 1, scale = .25, proj = "space") + RMnugget(var = 1) # Independent in time
 data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]),
                    T = seq(from = 1, by = 1, len = TIME)) 
 # Extracts values from object RFspatialPointsDataFrame
@@ -85,8 +85,8 @@ For example, fitting the model to the simulated dataset:
 
 ```{r}
 # Parameters to be estimated set as NA
-cov.to.estimate <- RMexp(var = NA, scale = NA) 
-model <- bdef(x, y, tim = 1:TIME, cov.model = cov.to.estimate,
+covModelM <- RMexp(var = NA, scale = NA) + RMnugget(var = NA)
+model <- bdef(x, y, tim = 1:TIME, cov.model = covModelM,
               df1 = 6, df2 = 6)
 ```
 
@@ -105,8 +105,8 @@ model$theta1 # Spline coefficients for f_1
 The fitting process supports some customization. For example, one may be interested in a different covariance function. We may change it with the following command:
 
 ```{r}
-# Value set to $nu = 2.5$
-G <- RMmatern(nu = 2.5, var = NA, scale = NA)
+# Value set to $nu = 2.5$ 
+G <- RMmatern(nu = 2.5, var = NA, scale = NA) + RMnugget(var = NA)
 # documentation, values left as NA are to be estimated
 model.matern <- bdef(x, y, tim = 1:TIME, cov.model = G)
 model.matern$model
@@ -134,7 +134,7 @@ One can also obtain the variogram using the `RandomFields` built in function.
 
 ```{r}
 plot(model$model, ylim = c(0,2), xlim = c(0,0.7),
-     model = list(`true model` = RMexp(var = 1, scale = .25)))
+     model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
+plot(model.matern$model, ylim = c(0,2), xlim = c(0,0.7),
+     model = list(`true model` = RMexp(var = 1, scale = .25) + RMnugget(var = 1)))
 ```
-
-![](variog.png)
