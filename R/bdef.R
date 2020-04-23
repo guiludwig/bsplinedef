@@ -1,8 +1,8 @@
 #' Spatial Deformation via tensor product of B-splines
 #'
-#' This function finds a spatial deformation for Gaussian processes, based
-#' on the penalized log-likelihood function. The deformation is obtained
-#' via the tensor product of B-spline basis functions.
+#' This function finds a spatial deformation for the coordinates of data from 
+#' a Gaussian process. The deformation is based on the penalized fitting of a 
+#' tensor product of B-spline basis functions.
 #'
 #' @param cov.model A model for the spatial covariance function. See
 #'                     \code{\link{RMmodel}} from the RandomFields package
@@ -298,10 +298,11 @@ bdef <- function(x, y, tim = NULL,
   } else if(!iterate) {
     theta.new <- theta0 # Won't iterate
   } else {
-    hatf1 <- optim(as.numeric(hatf0),
-                   fn = mdsKruskal,
-                   sv = SV, M = model1)$par
-    hatf1 <- matrix(hatf1, ncol = 2)
+    # hatf1 <- optim(as.numeric(hatf0),
+    #                fn = mdsKruskal,
+    #                sv = SV, M = model1)$par
+    # hatf1 <- matrix(hatf1, ncol = 2)
+    hatf1 <- mdsKruskal(x, sv = SV, M = model1)
     theta.new <- switch(type, 
                         jacobian = nloptr::nloptr(theta0,
                                                   eval_f = mdsTarget,
@@ -366,10 +367,12 @@ bdef <- function(x, y, tim = NULL,
                                     M = model0, X = x, w = W,
                                     Y = matrix(y, nrow = n))$par)
     } else {
-      hatf1 <- optim(as.numeric(hatf0),
-                     fn = mdsKruskal,
-                     sv = SV, M = model1)$par
-      hatf1 <- matrix(hatf1, ncol = 2)
+      # debugonce(mdsKruskal); mdsKruskal(as.numeric(hatf0), sv = SV, M = model1)
+      # hatf1 <- optim(as.numeric(hatf0),
+      #                fn = mdsKruskal,
+      #                sv = SV, M = model1)$par
+      # hatf1 <- matrix(hatf1, ncol = 2)
+      hatf1 <- mdsKruskal(x, sv = SV, M = model1)
       theta.new <- switch(type, 
                           jacobian = nloptr::nloptr(theta0,
                                                     eval_f = mdsTarget,
