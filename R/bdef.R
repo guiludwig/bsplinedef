@@ -46,8 +46,7 @@
 #' @param type Method to fit the deformation model, a choice of "jacobian" (default),
 #'                     and "none" (no penalty).
 #' @param iterate Keep iterating nonmetric multidimensional scaling using
-#'                     variogram function as transformation. Defaults to FALSE.
-#'                     Currently not very efficient.
+#'                     variogram function as transformation. Defaults to TRUE.
 #' @param ... Additional arguments for RFfit.
 #'
 #' @export
@@ -79,7 +78,7 @@
 #' return(-sin(angle)*x + cos(angle)*y + 0.5)
 #' }
 #' TIME <- 20
-#' covModel <- RMexp(var = 1, scale = .25, proj = "space") + RMnugget(var = 1) # Independent in time
+#' covModel <- RMexp(var = 1, scale = .25) + RMnugget(var = 1) # Independent in time
 #' data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), 
 #'                    T = seq(from = 1, by = 1, len = TIME)) # order ~ expand.grid(x, y, T)
 #' y <- as.numeric(unlist(data@data))
@@ -125,7 +124,7 @@ bdef <- function(x, y, tim = NULL,
                  window = list(x = range(x[,1]), y = range(x[,2])),
                  maxit = 2, traceback = TRUE, 
                  fullDes = TRUE, 
-                 xtol = 1e-4, mxeval = 500, iterate = FALSE,
+                 xtol = 1e-4, mxeval = 500, iterate = TRUE,
                  ...) {
   
   RFoptions(printlevel = 0, warn_normal_mode = FALSE)
@@ -277,7 +276,9 @@ bdef <- function(x, y, tim = NULL,
                         data = matrix(y, nrow = n), ...), silent = TRUE)
   })
   
-  if(target == "likelihood"){
+  if(!iterate) {
+    theta.new <- theta0 # Won't iterate
+  } else if(target == "likelihood"){
     # NOT WORKING FOR NOW!
     theta.new <- switch(type, 
                         jacobian = nloptr::auglag(theta0,
@@ -295,14 +296,12 @@ bdef <- function(x, y, tim = NULL,
                                      DF1 = df1, DF2 = df2,
                                      M = model1, X = x, w = W,
                                      Y = matrix(y, nrow = n))$par)
-  } else if(!iterate) {
-    theta.new <- theta0 # Won't iterate
   } else {
     # hatf1 <- optim(as.numeric(hatf0),
     #                fn = mdsKruskal,
     #                sv = SV, M = model1)$par
     # hatf1 <- matrix(hatf1, ncol = 2)
-    hatf1 <- mdsKruskal(x, sv = SV, M = model1)
+    hatf1 <- mdsKruskal(sv = SV, M = model1)
     theta.new <- switch(type, 
                         jacobian = nloptr::nloptr(theta0,
                                                   eval_f = mdsTarget,
@@ -336,7 +335,7 @@ bdef <- function(x, y, tim = NULL,
   }
   
   it <- 1
-  condition <- (target == "likelihood") | iterate # Iterates if likelihood, else skip
+  # condition <- (target == "likelihood") | iterate # Iterates if likelihood, else skip
   
   while(it < maxit & condition){
     model0 <- model1
@@ -372,7 +371,7 @@ bdef <- function(x, y, tim = NULL,
       #                fn = mdsKruskal,
       #                sv = SV, M = model1)$par
       # hatf1 <- matrix(hatf1, ncol = 2)
-      hatf1 <- mdsKruskal(x, sv = SV, M = model1)
+      hatf1 <- mdsKruskal(sv = SV, M = model1)
       theta.new <- switch(type, 
                           jacobian = nloptr::nloptr(theta0,
                                                     eval_f = mdsTarget,

@@ -1,7 +1,6 @@
-mdsKruskal <- function(x0, sv = SV, M = model1){
-  x0 <- matrix(x0, ncol = 2) # will be passed as numeric
+mdsKruskal <- function(sv = SV, M = model1){
   a <- summary(M)
-  sv <- sv/2 # Semivariogram
+  sv <- sv/2 # Actually g = 2\gamma
   # Missing ROOT!
   if(any(grep("nugget", colnames(a$param)))){
     sv[lower.tri(sv)] <- sv[lower.tri(sv)] - a$param["value", grep("nugget", colnames(a$param))]

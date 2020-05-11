@@ -8,7 +8,7 @@ bdef(x, y, tim = NULL, cov.model = RMexp(var = NA, scale = NA),
   type = c("jacobian", "none"), target = c("stress", "likelihood"),
   df1 = 6, df2 = 6, window = list(x = range(x[, 1]), y = range(x[,
   2])), maxit = 2, traceback = TRUE, fullDes = TRUE, xtol = 1e-04,
-  mxeval = 500, iterate = FALSE, ...)
+  mxeval = 500, iterate = TRUE, ...)
 }
 \arguments{
 \item{x}{A n times 2 matrix of coordinates for the sampled data points. The
@@ -64,8 +64,7 @@ to FALSE if the user has no interest in GDdist.
 Defaults to TRUE.}
 
 \item{iterate}{Keep iterating nonmetric multidimensional scaling using
-variogram function as transformation. Defaults to FALSE.
-Currently not very efficient.}
+variogram function as transformation. Defaults to TRUE.}
 
 \item{...}{Additional arguments for RFfit.}
 }
@@ -80,9 +79,9 @@ containing at least the following components
   \item{theta2}{B-spline coefficients for the coordinate x2}
 }
 \description{
-This function finds a spatial deformation for Gaussian processes, based
-on the penalized log-likelihood function. The deformation is obtained
-via the tensor product of B-spline basis functions.
+This function finds a spatial deformation for the coordinates of data from 
+a Gaussian process. The deformation is based on the penalized fitting of a 
+tensor product of B-spline basis functions.
 }
 \examples{
 # Example using artificially generated data
@@ -103,7 +102,7 @@ angle <- a*exp(-(x*x+y*y)/(b*b)) + 3*pi/2
 return(-sin(angle)*x + cos(angle)*y + 0.5)
 }
 TIME <- 20
-covModel <- RMexp(var = 1, scale = .25, proj = "space") + RMnugget(var = 1) # Independent in time
+covModel <- RMexp(var = 1, scale = .25) + RMnugget(var = 1) # Independent in time
 data <- RFsimulate(covModel, x = F1(x[,1],x[,2]), y = F2(x[,1],x[,2]), 
                    T = seq(from = 1, by = 1, len = TIME)) # order ~ expand.grid(x, y, T)
 y <- as.numeric(unlist(data@data))
