@@ -64,7 +64,8 @@ to FALSE if the user has no interest in GDdist.
 Defaults to TRUE.}
 
 \item{iterate}{Keep iterating nonmetric multidimensional scaling using
-variogram function as transformation. Defaults to TRUE.}
+variogram function as transformation. Defaults to TRUE. 
+Ignored if method = "likelihood".}
 
 \item{...}{Additional arguments for RFfit.}
 }

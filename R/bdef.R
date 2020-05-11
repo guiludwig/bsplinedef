@@ -46,7 +46,8 @@
 #' @param type Method to fit the deformation model, a choice of "jacobian" (default),
 #'                     and "none" (no penalty).
 #' @param iterate Keep iterating nonmetric multidimensional scaling using
-#'                     variogram function as transformation. Defaults to TRUE.
+#'                     variogram function as transformation. Defaults to TRUE. 
+#'                     Ignored if method = "likelihood".
 #' @param ... Additional arguments for RFfit.
 #'
 #' @export
@@ -335,7 +336,7 @@ bdef <- function(x, y, tim = NULL,
   }
   
   it <- 1
-  # condition <- (target == "likelihood") | iterate # Iterates if likelihood, else skip
+  condition <- (target == "likelihood") | iterate # always terates if likelihood, else skip
   
   while(it < maxit & condition){
     model0 <- model1
