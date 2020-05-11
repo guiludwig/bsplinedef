@@ -18,7 +18,7 @@ mdsKruskal <- function(x0, sv = SV, M = model1){
     sigma2 <- max(temp)
     sv[sv > 0.99*sigma2] <- 0.99*sigma2 # Small proportion, 0.008 in simulation
     phi <- temp2[order(temp)][1]
-    sv <- 1 - sv/sigma2 # Problem here, goes negative
+    sv <- 1 - sv/sigma2
     dij <- -phi*log(sv)
     ret <- cmdscale(dij)
   }
