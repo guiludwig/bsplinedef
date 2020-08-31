@@ -123,7 +123,7 @@ bdef <- function(x, y, tim = NULL,
                  target = c("stress", "likelihood"),
                  df1 = 6, df2 = 6, 
                  window = list(x = range(x[,1]), y = range(x[,2])),
-                 maxit = 2, traceback = TRUE, 
+                 maxit = 10, traceback = TRUE, 
                  fullDes = TRUE, 
                  xtol = 1e-4, mxeval = 500, iterate = TRUE,
                  ...) {
