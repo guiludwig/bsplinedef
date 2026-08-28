@@ -270,29 +270,7 @@ bdef <- function(x, y, tim = NULL,
                 matrix(diag(Sigma), nrow = nrow(Sigma))) +
       -2*Sigma # Sample Variog
     hatf0 <- MASS::isoMDS(SV, trace = FALSE)$points
-    theta0 <- switch(type, 
-                     jacobian = nloptr::nloptr(theta00,
-                                               eval_f = mdsTarget,
-                                               ub = rep(Inf, length(theta00)),
-                                               lb = rep(0, length(theta00)),
-                                               eval_grad_f = dMdsTarget, 
-                                               eval_g_ineq = mdsConstraint, 
-                                               opts = list(algorithm = "NLOPT_LD_MMA", #"NLOPT_LN_COBYLA",
-                                                           xtol_rel = xtol, 
-                                                           maxeval = mxeval), # required
-                                               DF1 = df1, DF2 = df2,
-                                               M = model0, X = x, w = W,
-                                               Y = hatf0),
-                     none = optim(theta00,
-                                  fn = mdsTarget, gr = dMdsTarget,
-                                  method = "BFGS",
-                                  DF1 = df1, DF2 = df2,
-                                  M = model0, X = x, w = W,
-                                  Y = hatf0))
-    if(type == "jacobian" && theta0$status == 5) warning("Maxeval reached, perhaps increase to attain convergence?")
-    theta0 <- switch(type,
-                     jacobian = theta0$solution,
-                     none = theta0$par)
+    theta0 <- 
     # Last one should equal
     # theta0a <- as.numeric(solve(crossprod(W), crossprod(W, hatf0)))
     # 
